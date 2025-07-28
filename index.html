@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyBookTracker - Manage Your Reading</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Animation for book cards */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .book-card {
+            animation: fadeIn 0.3s ease-out forwards;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .book-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4f46e5;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background-color: #10b981;
+        }
+        
+        .toast.error {
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <!-- Main Container -->
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-indigo-600 text-white shadow-md">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-book-open text-2xl"></i>
+                    <h1 class="text-2xl font-bold">MyBookTracker</h1>
+                    <div class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-full font-medium text-sm">
+                        Total Books: <span id="totalBooks">0</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="mobileMenuBtn" class="md:hidden text-white p-2">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <button id="addBookBtn" class="bg-white text-indigo-600 px-4 py-2 rounded-full font-medium hover:bg-indigo-50 transition">
+                        <i class="fas fa-plus mr-2"></i> Add Book
+                    </button>
+                    <button id="addByIsbnBtn" class="bg-indigo-500 text-white px-4 py-2 rounded-full font-medium hover:bg-indigo-400 transition">
+                        <i class="fas fa-barcode mr-2"></i> Add by ISBN
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="flex flex-grow">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white shadow-sm p-4 hidden md:block">
+                <h3 class="font-semibold text-lg mb-4 text-gray-700">Categories</h3>
+                <ul class="space-y-2" id="categoriesList">
+                    <li><a href="#" class="category-link block px-3 py-2 rounded-lg bg-indigo-100 text-indigo-700" data-category="all">All</a></li>
+                </ul>
+                <button id="addCategoryBtn" class="mt-4 w-full bg-indigo-100 text-indigo-600 px-3 py-2 rounded-lg font-medium hover:bg-indigo-200 transition">
+                    <i class="fas fa-plus mr-2"></i> Add Category
+                </button>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-grow container mx-auto px-4 py-6">
+                <!-- Search and Sort -->
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div class="relative flex-grow">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            <input id="searchInput" type="text" placeholder="Search books..." class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <label class="text-gray-600 text-sm">Sort by:</label>
+                            <select id="sortSelect" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="title-asc">Title (A-Z)</option>
+                                <option value="title-desc">Title (Z-A)</option>
+                                <option value="author-asc">Author (A-Z)</option>
+                                <option value="author-desc">Author (Z-A)</option>
+                                <option value="date-desc">Recently Added</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Books Grid -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">My Books</h2>
+                        <div class="flex items-center space-x-2">
+                            <button id="gridViewBtn" class="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                            <button id="listViewBtn" class="p-2 rounded-lg hover:bg-gray-100">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div id="loadingIndicator" class="flex justify-center items-center py-8">
+                        <div class="spinner"></div>
+                        <span class="ml-2 text-gray-600">Loading books...</span>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="emptyState" class="hidden text-center py-12">
+                        <i class="fas fa-book-open text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No books yet</h3>
+                        <p class="text-gray-500 mb-4">Start building your library by adding your first book!</p>
+                        <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition" onclick="openAddBookModal()">
+                            <i class="fas fa-plus mr-2"></i> Add Your First Book
+                        </button>
+                    </div>
+
+                    <div id="booksContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <!-- Book cards will be dynamically inserted here -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add Book Modal -->
+    <div id="addBookModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center border-b px-6 py-4">
+                <h3 class="text-xl font-semibold">Add New Book</h3>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="addBookForm">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2" for="bookTitle">Title</label>
+                        <input type="text" id="bookTitle" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2" for="bookAuthor">Author</label>
+                        <input type="text" id="bookAuthor" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2" for="bookCategory">Category</label>
+                        <select id="bookCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <!-- Categories will be dynamically loaded here -->
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2" for="bookCover">Cover URL</label>
+                        <input type="text" id="bookCover" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/book-cover.jpg">
+                    </div>
+                </form>
+            </div>
+            <div class="flex justify-end border-t px-6 py-4 space-x-3">
+                <button id="cancelAddBookBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button id="saveBookBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center">
+                    <span id="saveBookText">Save Book</span>
+                    <div id="saveBookSpinner" class="hidden ml-2 spinner"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add by ISBN Modal -->
+    <div id="addByIsbnModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center border-b px-6 py-4">
+                <h3 class="text-xl font-semibold">Add Book by ISBN</h3>
+                <button id="closeIsbnModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2" for="isbnInput">ISBN</label>
+                    <input type="text" id="isbnInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter ISBN (10 or 13 digits)">
+                </div>
+                <div id="bookPreview" class="hidden mb-4 p-4 border border-gray-200 rounded-lg">
+                    <div class="flex gap-4">
+                        <img id="previewCover" src="" alt="Book Cover" class="w-16 h-24 object-cover rounded">
+                        <div>
+                            <h4 id="previewTitle" class="font-semibold"></h4>
+                            <p id="previewAuthor" class="text-gray-600 text-sm"></p>
+                            <select id="previewCategory" class="mt-2 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end border-t px-6 py-4 space-x-3">
+                <button id="cancelIsbnBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button id="searchIsbnBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center">
+                    <span id="searchIsbnText">Search</span>
+                    <div id="searchIsbnSpinner" class="hidden ml-2 spinner"></div>
+                </button>
+                <button id="addFromIsbnBtn" class="hidden px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add Book</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Book Details Modal -->
+    <div id="bookDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center border-b px-6 py-4">
+                <h3 class="text-xl font-semibold">Book Details</h3>
+                <button id="closeDetailsModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row gap-6 mb-6">
+                    <div class="flex-shrink-0">
+                        <img id="detailsBookCover" src="https://via.placeholder.com/150x200" alt="Book Cover" class="w-32 h-48 object-cover rounded-lg shadow-sm">
+                    </div>
+                    <div>
+                        <h2 id="detailsBookTitle" class="text-2xl font-bold mb-1">Book Title</h2>
+                        <p id="detailsBookAuthor" class="text-gray-600 mb-3">Author Name</p>
+                        <p id="detailsBookCategory" class="text-sm text-indigo-600 mb-3">Category</p>
+                        <div class="flex space-x-2">
+                            <button id="editBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                <i class="fas fa-edit mr-1"></i> Edit
+                            </button>
+                            <button id="deleteBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
+                                <i class="fas fa-trash mr-1"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div id="addCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center border-b px-6 py-4">
+                <h3 class="text-xl font-semibold">Add New Category</h3>
+                <button id="closeCategoryModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2" for="newCategoryInput">Category Name</label>
+                    <input type="text" id="newCategoryInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Science Fiction">
+                </div>
+            </div>
+            <div class="flex justify-end border-t px-6 py-4 space-x-3">
+                <button id="cancelAddCategoryBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button id="saveCategoryBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Category</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration - 請替換為你的 Firebase 專案配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyBhufd0TSjVN-6UZX0mjjNwozPma1KjiLw",
+            authDomain: "booktracker-eeb80.firebaseapp.com",
+            projectId: "booktracker-eeb80",
+            storageBucket: "booktracker-eeb80.firebasestorage.app",
+            messagingSenderId: "1041414142866",
+            appId: "1:1041414142866:web:e1a396ed381137fab55f4b",
+            measurementId: "G-ZRHGTERX9B"
+        };
+
+        // 檢查是否已配置 Firebase
+        const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+        let db = null;
+        let books = [];
+        let categories = ["all"]; // 預設只有 All
+
+        if (isFirebaseConfigured) {
+            // 動態載入 Firebase SDK
+            const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+            const { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
+            // 初始化 Firebase
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+
+            // 即時監聽書籍資料變化
+            const booksCollection = collection(db, "books");
+            onSnapshot(booksCollection, (snapshot) => {
+                books = [];
+                snapshot.forEach((doc) => {
+                    books.push({ id: doc.id, ...doc.data() });
+                });
+                renderBooks();
+                updateStats();
+            });
+
+            // 即時監聽分類資料變化
+            const categoriesCollection = collection(db, "categories");
+            onSnapshot(categoriesCollection, (snapshot) => {
+                categories = ["all"]; // 確保 All 永遠存在
+                snapshot.forEach((doc) => {
+                    categories.push(doc.data().name);
+                });
+                renderCategories();
+                populateCategorySelects();
+            });
+
+            // Firebase 資料庫操作函式
+            window.addBookToFirestore = async (bookData) => {
+                try {
+                    const docRef = await addDoc(collection(db, "books"), {
+                        ...bookData,
+                        createdAt: new Date()
+                    });
+                    showToast("Book added successfully!", "success");
+                    return docRef.id;
+                } catch (error) {
+                    console.error("Error adding book:", error);
+                    showToast("Error adding book. Please try again.", "error");
+                    throw error;
+                }
+            };
+
+            window.updateBookInFirestore = async (bookId, bookData) => {
+                try {
+                    const bookRef = doc(db, "books", bookId);
+                    await updateDoc(bookRef, bookData);
+                    showToast("Book updated successfully!", "success");
+                } catch (error) {
+                    console.error("Error updating book:", error);
+                    showToast("Error updating book. Please try again.", "error");
+                    throw error;
+                }
+            };
+
+            window.deleteBookFromFirestore = async (bookId) => {
+                try {
+                    await deleteDoc(doc(db, "books", bookId));
+                    showToast("Book deleted successfully!", "success");
+                } catch (error) {
+                    console.error("Error deleting book:", error);
+                    showToast("Error deleting book. Please try again.", "error");
+                    throw error;
+                }
+            };
+
+            window.addCategoryToFirestore = async (categoryName) => {
+                try {
+                    await addDoc(collection(db, "categories"), { name: categoryName });
+                    showToast("Category added successfully!", "success");
+                } catch (error) {
+                    console.error("Error adding category:", error);
+                    showToast("Error adding category. Please try again.", "error");
+                    throw error;
+                }
+            };
+
+        } else {
+            // 使用本地儲存作為後備方案
+            console.warn("Firebase not configured. Using local storage as fallback.");
+            
+            // 從 localStorage 載入書籍資料
+            const savedBooks = localStorage.getItem("myBookTrackerBooks");
+            if (savedBooks) {
+                books = JSON.parse(savedBooks);
+            } else {
+                // 預設範例資料
+                books = [
+                    {
+                        id: "1",
+                        title: "The Silent Patient",
+                        author: "Alex Michaelides",
+                        cover: "https://m.media-amazon.com/images/I/81p5L1VYKaL._AC_UF1000,1000_QL80_.jpg",
+                        category: "fiction",
+                        createdAt: new Date("2024-01-01")
+                    },
+                    {
+                        id: "2",
+                        title: "Atomic Habits",
+                        author: "James Clear",
+                        cover: "https://m.media-amazon.com/images/I/91bYsX41DVL._AC_UF1000,1000_QL80_.jpg",
+                        category: "non-fiction",
+                        createdAt: new Date("2024-01-02")
+                    }
+                ];
+            }
+
+            // 從 localStorage 載入分類資料
+            const savedCategories = localStorage.getItem("myBookTrackerCategories");
+            if (savedCategories) {
+                categories = ["all", ...JSON.parse(savedCategories)];
+            } else {
+                categories = ["all", "fiction", "non-fiction", "uncategorized"];
+            }
+
+            // 本地儲存操作函式
+            window.addBookToFirestore = async (bookData) => {
+                const newBook = {
+                    id: Date.now().toString(),
+                    ...bookData,
+                    createdAt: new Date()
+                };
+                books.push(newBook);
+                localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
+                renderBooks();
+                updateStats();
+                showToast("Book added successfully!", "success");
+                return newBook.id;
+            };
+
+            window.updateBookInFirestore = async (bookId, bookData) => {
+                const bookIndex = books.findIndex(book => book.id === bookId);
+                if (bookIndex !== -1) {
+                    books[bookIndex] = { ...books[bookIndex], ...bookData };
+                    localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
+                    renderBooks();
+                    updateStats();
+                    showToast("Book updated successfully!", "success");
+                }
+            };
+
+            window.deleteBookFromFirestore = async (bookId) => {
+                books = books.filter(book => book.id !== bookId);
+                localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
+                renderBooks();
+                updateStats();
+                showToast("Book deleted successfully!", "success");
+            };
+
+            window.addCategoryToFirestore = async (categoryName) => {
+                if (!categories.includes(categoryName)) {
+                    categories.push(categoryName);
+                    localStorage.setItem("myBookTrackerCategories", JSON.stringify(categories.filter(c => c !== "all")));
+                    renderCategories();
+                    populateCategorySelects();
+                    showToast("Category added successfully!", "success");
+                } else {
+                    showToast("Category already exists!", "error");
+                }
+            };
+
+            // 初始渲染
+            setTimeout(() => {
+                renderBooks();
+                updateStats();
+                renderCategories();
+                populateCategorySelects();
+            }, 100);
+        }
+
+        // Google Books API 搜尋函式
+        window.searchBookByISBN = async (isbn) => {
+            try {
+                const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    const book = data.items[0].volumeInfo;
+                    return {
+                        title: book.title || "Unknown Title",
+                        author: book.authors ? book.authors.join(", ") : "Unknown Author",
+                        cover: book.imageLinks ? book.imageLinks.thumbnail : null,
+                        isbn: isbn
+                    };
+                } else {
+                    // 嘗試 Open Library API 作為後備
+                    const openLibResponse = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+                    const openLibData = await openLibResponse.json();
+                    
+                    const bookKey = `ISBN:${isbn}`;
+                    if (openLibData[bookKey]) {
+                        const book = openLibData[bookKey];
+                        return {
+                            title: book.title || "Unknown Title",
+                            author: book.authors ? book.authors.map(a => a.name).join(", ") : "Unknown Author",
+                            cover: book.cover ? book.cover.medium : null,
+                            isbn: isbn
+                        };
+                    }
+                }
+                
+                throw new Error("Book not found");
+            } catch (error) {
+                console.error("Error searching book:", error);
+                throw error;
+            }
+        };
+
+        // 全域變數和函式
+        window.books = books;
+        window.db = db;
+        window.isFirebaseConfigured = isFirebaseConfigured;
+        window.categories = categories;
+    </script>
+
+    <script>
+        // DOM Elements
+        const booksContainer = document.getElementById("booksContainer");
+        const addBookBtn = document.getElementById("addBookBtn");
+        const addByIsbnBtn = document.getElementById("addByIsbnBtn");
+        const addBookModal = document.getElementById("addBookModal");
+        const addByIsbnModal = document.getElementById("addByIsbnModal");
+        const closeModalBtn = document.getElementById("closeModalBtn");
+        const closeIsbnModalBtn = document.getElementById("closeIsbnModalBtn");
+        const cancelAddBookBtn = document.getElementById("cancelAddBookBtn");
+        const cancelIsbnBtn = document.getElementById("cancelIsbnBtn");
+        const saveBookBtn = document.getElementById("saveBookBtn");
+        const searchIsbnBtn = document.getElementById("searchIsbnBtn");
+        const addFromIsbnBtn = document.getElementById("addFromIsbnBtn");
+        const addBookForm = document.getElementById("addBookForm");
+        const bookDetailsModal = document.getElementById("bookDetailsModal");
+        const closeDetailsModalBtn = document.getElementById("closeDetailsModalBtn");
+        const gridViewBtn = document.getElementById("gridViewBtn");
+        const listViewBtn = document.getElementById("listViewBtn");
+        const totalBooksElement = document.getElementById("totalBooks");
+        const loadingIndicator = document.getElementById("loadingIndicator");
+        const emptyState = document.getElementById("emptyState");
+        const categoriesList = document.getElementById("categoriesList");
+        const addCategoryBtn = document.getElementById("addCategoryBtn");
+        const addCategoryModal = document.getElementById("addCategoryModal");
+        const closeCategoryModalBtn = document.getElementById("closeCategoryModalBtn");
+        const cancelAddCategoryBtn = document.getElementById("cancelAddCategoryBtn");
+        const saveCategoryBtn = document.getElementById("saveCategoryBtn");
+        const newCategoryInput = document.getElementById("newCategoryInput");
+        
+        let currentView = "grid";
+        let currentSelectedBook = null;
+        let currentCategory = "all";
+        let foundBookData = null;
+
+        // Initialize the app
+        function init() {
+            setupEventListeners();
+            
+            // 如果 Firebase 未配置，立即顯示內容
+            if (!window.isFirebaseConfigured) {
+                hideLoading();
+            } else {
+                // Firebase 配置後，等待資料載入
+                setTimeout(() => {
+                    if (window.books.length === 0) {
+                        hideLoading();
+                    }
+                }, 2000);
+            }
+        }
+
+        // Hide loading indicator
+        function hideLoading() {
+            loadingIndicator.classList.add("hidden");
+            if (window.books.length === 0) {
+                emptyState.classList.remove("hidden");
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type = "success") {
+            const toast = document.createElement("div");
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add("show"), 100);
+            setTimeout(() => {
+                toast.classList.remove("show");
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // Render books based on current view
+        function renderBooks() {
+            hideLoading();
+            booksContainer.innerHTML = "";
+            
+            if (window.books.length === 0) {
+                emptyState.classList.remove("hidden");
+                return;
+            } else {
+                emptyState.classList.add("hidden");
+            }
+            
+            const filteredBooks = filterAndSortBooks();
+            
+            if (filteredBooks.length === 0) {
+                booksContainer.innerHTML = 
+                    `<div class="col-span-full text-center py-12">
+                        <i class="fas fa-search text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No books found</h3>
+                        <p class="text-gray-500">Try adjusting your search or filters.</p>
+                    </div>`;
+                return;
+            }
+
+            filteredBooks.forEach(book => {
+                const bookCard = createBookCard(book);
+                booksContainer.appendChild(bookCard);
+            });
+        }
+
+        // Create a book card element
+        function createBookCard(book) {
+            const bookCard = document.createElement("div");
+            bookCard.className = `book-card bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer ${currentView === "grid" ? "" : "flex"}`;
+            bookCard.dataset.id = book.id;
+            
+            if (currentView === "grid") {
+                bookCard.innerHTML = `
+                    <div class="relative">
+                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" alt="${book.title}" class="w-full h-48 object-cover">
+                        <span class="absolute top-2 right-2 px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">${book.category || "uncategorized"}</span>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-lg mb-1 truncate">${book.title}</h3>
+                        <p class="text-gray-600 text-sm mb-3 truncate">${book.author}</p>
+                    </div>
+                `;
+            } else {
+                bookCard.innerHTML = `
+                    <div class="flex-shrink-0">
+                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" alt="${book.title}" class="w-24 h-36 object-cover">
+                    </div>
+                    <div class="p-4 flex-grow">
+                        <div class="flex justify-between">
+                            <div>
+                                <h3 class="font-semibold text-lg mb-1">${book.title}</h3>
+                                <p class="text-gray-600 text-sm mb-2">${book.author}</p>
+                                <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">${book.category || "uncategorized"}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Add click event to open details modal
+            bookCard.addEventListener("click", () => {
+                openBookDetails(book.id);
+            });
+            
+            return bookCard;
+        }
+
+        // Update statistics
+        function updateStats() {
+            totalBooksElement.textContent = window.books.length;
+        }
+
+        // Render categories in sidebar
+        function renderCategories() {
+            categoriesList.innerHTML = "";
+            window.categories.forEach(cat => {
+                const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.href = "#";
+                a.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
+                a.dataset.category = cat;
+                a.textContent = cat.charAt(0).toUpperCase() + cat.slice(1); // Capitalize first letter
+                li.appendChild(a);
+                categoriesList.appendChild(li);
+            });
+        }
+
+        // Populate category selects in modals
+        function populateCategorySelects() {
+            const bookCategorySelect = document.getElementById("bookCategory");
+            const previewCategorySelect = document.getElementById("previewCategory");
+
+            // Clear existing options except default
+            bookCategorySelect.innerHTML = "";
+            previewCategorySelect.innerHTML = "";
+
+            window.categories.filter(cat => cat !== "all").forEach(cat => {
+                const option1 = document.createElement("option");
+                option1.value = cat;
+                option1.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                bookCategorySelect.appendChild(option1);
+
+                const option2 = document.createElement("option");
+                option2.value = cat;
+                option2.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                previewCategorySelect.appendChild(option2);
+            });
+
+            // Add uncategorized if not present
+            if (!window.categories.includes("uncategorized")) {
+                const uncategorizedOption1 = document.createElement("option");
+                uncategorizedOption1.value = "uncategorized";
+                uncategorizedOption1.textContent = "Uncategorized";
+                bookCategorySelect.prepend(uncategorizedOption1);
+
+                const uncategorizedOption2 = document.createElement("option");
+                uncategorizedOption2.value = "uncategorized";
+                uncategorizedOption2.textContent = "Uncategorized";
+                previewCategorySelect.prepend(uncategorizedOption2);
+            }
+        }
+
+        // Open add book modal
+        function openAddBookModal() {
+            addBookModal.classList.remove("hidden");
+            populateCategorySelects(); // Ensure categories are up-to-date
+        }
+
+        // Close add book modal
+        function closeAddBookModal() {
+            addBookModal.classList.add("hidden");
+            addBookForm.reset();
+        }
+
+        // Open add by ISBN modal
+        function openAddByIsbnModal() {
+            addByIsbnModal.classList.remove("hidden");
+            document.getElementById("bookPreview").classList.add("hidden");
+            document.getElementById("addFromIsbnBtn").classList.add("hidden");
+            document.getElementById("isbnInput").value = ""; // Clear ISBN input
+            foundBookData = null;
+            populateCategorySelects(); // Ensure categories are up-to-date
+        }
+
+        // Close add by ISBN modal
+        function closeAddByIsbnModal() {
+            addByIsbnModal.classList.add("hidden");
+            document.getElementById("isbnInput").value = "";
+            document.getElementById("bookPreview").classList.add("hidden");
+            document.getElementById("addFromIsbnBtn").classList.add("hidden");
+            foundBookData = null;
+        }
+
+        // Search book by ISBN
+        async function searchByISBN() {
+            const isbn = document.getElementById("isbnInput").value.trim();
+            if (!isbn) {
+                showToast("Please enter an ISBN", "error");
+                return;
+            }
+
+            const searchBtn = document.getElementById("searchIsbnBtn");
+            const searchText = document.getElementById("searchIsbnText");
+            const searchSpinner = document.getElementById("searchIsbnSpinner");
+            
+            searchText.textContent = "Searching...";
+            searchSpinner.classList.remove("hidden");
+            searchBtn.disabled = true;
+            document.getElementById("bookPreview").classList.add("hidden"); // Hide preview during search
+            document.getElementById("addFromIsbnBtn").classList.add("hidden"); // Hide add button
+
+            try {
+                const bookData = await window.searchBookByISBN(isbn);
+                foundBookData = bookData;
+                
+                // Show preview
+                document.getElementById("previewTitle").textContent = bookData.title;
+                document.getElementById("previewAuthor").textContent = bookData.author;
+                document.getElementById("previewCover").src = bookData.cover || "https://via.placeholder.com/150x200?text=No+Cover";
+                document.getElementById("bookPreview").classList.remove("hidden");
+                document.getElementById("addFromIsbnBtn").classList.remove("hidden");
+
+                // Set default category for preview
+                document.getElementById("previewCategory").value = bookData.category || "uncategorized";
+                
+                showToast("Book found!", "success");
+            } catch (error) {
+                showToast("Book not found. Please check the ISBN.", "error");
+            } finally {
+                searchText.textContent = "Search";
+                searchSpinner.classList.add("hidden");
+                searchBtn.disabled = false;
+            }
+        }
+
+        // Add book from ISBN search
+        async function addBookFromISBN() {
+            if (!foundBookData) return;
+
+            const selectedCategory = document.getElementById("previewCategory").value;
+
+            try {
+                await window.addBookToFirestore({
+                    title: foundBookData.title,
+                    author: foundBookData.author,
+                    cover: foundBookData.cover,
+                    category: selectedCategory,
+                    isbn: foundBookData.isbn
+                });
+                closeAddByIsbnModal();
+            } catch (error) {
+                showToast("Error adding book. Please try again.", "error");
+            }
+        }
+
+        // Open book details modal
+        function openBookDetails(bookId) {
+            const book = window.books.find(b => b.id === bookId);
+            if (!book) return;
+            
+            currentSelectedBook = book;
+            
+            // Update modal content
+            document.getElementById("detailsBookTitle").textContent = book.title;
+            document.getElementById("detailsBookAuthor").textContent = book.author;
+            document.getElementById("detailsBookCategory").textContent = book.category || "uncategorized";
+            document.getElementById("detailsBookCover").src = book.cover || "https://via.placeholder.com/300x450?text=No+Cover";
+            
+            // Show modal
+            bookDetailsModal.classList.remove("hidden");
+        }
+
+        // Close book details modal
+        function closeBookDetailsModal() {
+            bookDetailsModal.classList.add("hidden");
+            currentSelectedBook = null;
+        }
+
+        // Save new book (manual add)
+        async function saveBook() {
+            const title = document.getElementById("bookTitle").value.trim();
+            const author = document.getElementById("bookAuthor").value.trim();
+            const category = document.getElementById("bookCategory").value;
+            const cover = document.getElementById("bookCover").value.trim();
+            
+            if (!title || !author) {
+                showToast("Please fill in all required fields", "error");
+                return;
+            }
+
+            const saveBtn = document.getElementById("saveBookBtn");
+            const saveText = document.getElementById("saveBookText");
+            const saveSpinner = document.getElementById("saveBookSpinner");
+            
+            saveText.textContent = "Saving...";
+            saveSpinner.classList.remove("hidden");
+            saveBtn.disabled = true;
+            
+            try {
+                await window.addBookToFirestore({
+                    title,
+                    author,
+                    category,
+                    cover: cover || null
+                });
+                closeAddBookModal();
+            } catch (error) {
+                showToast("Error saving book. Please try again.", "error");
+            } finally {
+                saveText.textContent = "Save Book";
+                saveSpinner.classList.add("hidden");
+                saveBtn.disabled = false;
+            }
+        }
+
+        // Delete book
+        async function deleteBook() {
+            if (!currentSelectedBook) return;
+            
+            if (confirm("Are you sure you want to delete this book?")) {
+                try {
+                    await window.deleteBookFromFirestore(currentSelectedBook.id);
+                    closeBookDetailsModal();
+                } catch (error) {
+                    showToast("Error deleting book. Please try again.", "error");
+                }
+            }
+        }
+
+        // Open add category modal
+        function openAddCategoryModal() {
+            addCategoryModal.classList.remove("hidden");
+            newCategoryInput.value = ""; // Clear input
+        }
+
+        // Close add category modal
+        function closeAddCategoryModal() {
+            addCategoryModal.classList.add("hidden");
+        }
+
+        // Save new category
+        async function saveCategory() {
+            const categoryName = newCategoryInput.value.trim().toLowerCase();
+            if (!categoryName) {
+                showToast("Please enter a category name.", "error");
+                return;
+            }
+            if (window.categories.includes(categoryName)) {
+                showToast("Category already exists!", "error");
+                return;
+            }
+
+            try {
+                await window.addCategoryToFirestore(categoryName);
+                closeAddCategoryModal();
+            } catch (error) {
+                showToast("Error adding category. Please try again.", "error");
+            }
+        }
+
+        // Filter and sort books
+        function filterAndSortBooks() {
+            const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+            const sortOption = document.getElementById("sortSelect").value;
+            
+            let filteredBooks = [...window.books];
+            
+            // Apply category filter
+            if (currentCategory !== "all") {
+                filteredBooks = filteredBooks.filter(book => 
+                    (book.category || "uncategorized") === currentCategory
+                );
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredBooks = filteredBooks.filter(book => 
+                    book.title.toLowerCase().includes(searchTerm) || 
+                    book.author.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Apply sorting
+            switch(sortOption) {
+                case "title-asc":
+                    filteredBooks.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+                case "title-desc":
+                    filteredBooks.sort((a, b) => b.title.localeCompare(a.title));
+                    break;
+                case "author-asc":
+                    filteredBooks.sort((a, b) => a.author.localeCompare(b.author));
+                    break;
+                case "author-desc":
+                    filteredBooks.sort((a, b) => b.author.localeCompare(a.author));
+                    break;
+                case "date-desc":
+                    filteredBooks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    break;
+            }
+            
+            return filteredBooks;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Add book modal
+            addBookBtn.addEventListener("click", openAddBookModal);
+            addByIsbnBtn.addEventListener("click", openAddByIsbnModal);
+            closeModalBtn.addEventListener("click", closeAddBookModal);
+            closeIsbnModalBtn.addEventListener("click", closeAddByIsbnModal);
+            cancelAddBookBtn.addEventListener("click", closeAddBookModal);
+            cancelIsbnBtn.addEventListener("click", closeAddByIsbnModal);
+            saveBookBtn.addEventListener("click", saveBook);
+            searchIsbnBtn.addEventListener("click", searchByISBN);
+            addFromIsbnBtn.addEventListener("click", addBookFromISBN);
+            
+            // Book details modal
+            closeDetailsModalBtn.addEventListener("click", closeBookDetailsModal);
+            document.getElementById("deleteBookBtn").addEventListener("click", deleteBook);
+            
+            // View toggle
+            gridViewBtn.addEventListener("click", () => {
+                if (currentView !== "grid") {
+                    currentView = "grid";
+                    gridViewBtn.classList.add("bg-indigo-100", "text-indigo-600");
+                    gridViewBtn.classList.remove("hover:bg-gray-100");
+                    listViewBtn.classList.remove("bg-indigo-100", "text-indigo-600");
+                    listViewBtn.classList.add("hover:bg-gray-100");
+                    renderBooks();
+                }
+            });
+            
+            listViewBtn.addEventListener("click", () => {
+                if (currentView !== "list") {
+                    currentView = "list";
+                    listViewBtn.classList.add("bg-indigo-100", "text-indigo-600");
+                    listViewBtn.classList.remove("hover:bg-gray-100");
+                    gridViewBtn.classList.remove("bg-indigo-100", "text-indigo-600");
+                    gridViewBtn.classList.add("hover:bg-gray-100");
+                    renderBooks();
+                }
+            });
+            
+            // Category filter
+            categoriesList.addEventListener("click", (e) => {
+                if (e.target.classList.contains("category-link")) {
+                    e.preventDefault();
+                    const category = e.target.dataset.category;
+                    
+                    // Update active category
+                    document.querySelectorAll(".category-link").forEach(l => {
+                        l.classList.remove("bg-indigo-100", "text-indigo-700");
+                        l.classList.add("hover:bg-gray-100");
+                    });
+                    e.target.classList.add("bg-indigo-100", "text-indigo-700");
+                    e.target.classList.remove("hover:bg-gray-100");
+                    
+                    currentCategory = category;
+                    renderBooks();
+                }
+            });
+            
+            // Add Category Modal
+            addCategoryBtn.addEventListener("click", openAddCategoryModal);
+            closeCategoryModalBtn.addEventListener("click", closeAddCategoryModal);
+            cancelAddCategoryBtn.addEventListener("click", closeAddCategoryModal);
+            saveCategoryBtn.addEventListener("click", saveCategory);
+            newCategoryInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    saveCategory();
+                }
+            });
+
+            // Search and sort event listeners
+            document.getElementById("searchInput").addEventListener("input", () => {
+                renderBooks();
+            });
+
+            document.getElementById("sortSelect").addEventListener("change", () => {
+                renderBooks();
+            });
+
+            // Mobile menu toggle
+            const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+            const sidebar = document.querySelector("aside");
+            
+            mobileMenuBtn.addEventListener("click", () => {
+                sidebar.classList.toggle("hidden");
+            });
+
+            // Enter key support for ISBN input
+            document.getElementById("isbnInput").addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    searchByISBN();
+                }
+            });
+        }
+
+        // Make functions globally available
+        window.openAddBookModal = openAddBookModal;
+        window.renderBooks = renderBooks;
+        window.updateStats = updateStats;
+        window.renderCategories = renderCategories;
+        window.populateCategorySelects = populateCategorySelects;
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener("DOMContentLoaded", init);
+    </script>
+</body>
+</html>
+
+
