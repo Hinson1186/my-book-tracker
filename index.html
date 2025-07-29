@@ -343,9 +343,9 @@
             // 即時監聽書籍資料變化
             const booksCollection = collection(db, "books");
             onSnapshot(booksCollection, (snapshot) => {
-                books = [];
+                window.books = []; // 直接更新 window.books
                 snapshot.forEach((doc) => {
-                    books.push({ id: doc.id, ...doc.data() });
+                    window.books.push({ id: doc.id, ...doc.data() });
                 });
                 renderBooks();
                 updateStats();
@@ -359,9 +359,9 @@
             // 即時監聽分類資料變化
             const categoriesCollection = collection(db, "categories");
             onSnapshot(categoriesCollection, (snapshot) => {
-                categories = ["all"]; // 確保 All 永遠存在
+                window.categories = ["all"]; // 確保 All 永遠存在，直接更新 window.categories
                 snapshot.forEach((doc) => {
-                    categories.push(doc.data().name);
+                    window.categories.push(doc.data().name);
                 });
                 renderCategories();
                 populateCategorySelects();
@@ -1105,5 +1105,3 @@
     </script>
 </body>
 </html>
-
-
