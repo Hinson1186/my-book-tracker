@@ -78,6 +78,21 @@
         .toast.error {
             background-color: #ef4444;
         }
+        
+        /* Multi-line text truncation */
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -373,6 +388,15 @@
             // Firebase 資料庫操作函式
             window.addBookToFirestore = async (bookData) => {
                 try {
+                    // 檢查是否有重複的 ISBN
+                    if (bookData.isbn) {
+                        const duplicateBook = window.books.find(book => book.isbn === bookData.isbn);
+                        if (duplicateBook) {
+                            showToast(`Book with ISBN ${bookData.isbn} already exists: "${duplicateBook.title}"`, "error");
+                            throw new Error("Duplicate ISBN");
+                        }
+                    }
+                    
                     const docRef = await addDoc(collection(db, "books"), {
                         ...bookData,
                         createdAt: new Date()
@@ -380,6 +404,9 @@
                     showToast("Book added successfully!", "success");
                     return docRef.id;
                 } catch (error) {
+                    if (error.message === "Duplicate ISBN") {
+                        throw error; // 重新拋出重複 ISBN 錯誤
+                    }
                     console.error("Error adding book:", error);
                     showToast("Error adding book. Please try again.", "error");
                     throw error;
@@ -416,6 +443,35 @@
                 } catch (error) {
                     console.error("Error adding category:", error);
                     showToast("Error adding category. Please try again.", "error");
+                    throw error;
+                }
+            };
+
+            window.deleteCategoryFromFirestore = async (categoryName) => {
+                try {
+                    // 查找並刪除分類文檔
+                    const categoriesSnapshot = await getDocs(collection(db, "categories"));
+                    categoriesSnapshot.forEach(async (docSnapshot) => {
+                        if (docSnapshot.data().name === categoryName) {
+                            await deleteDoc(doc(db, "categories", docSnapshot.id));
+                        }
+                    });
+                    
+                    // 將該分類下的所有書籍改為 "uncategorized"
+                    const booksSnapshot = await getDocs(collection(db, "books"));
+                    booksSnapshot.forEach(async (docSnapshot) => {
+                        const bookData = docSnapshot.data();
+                        if (bookData.category === categoryName) {
+                            await updateDoc(doc(db, "books", docSnapshot.id), {
+                                category: "uncategorized"
+                            });
+                        }
+                    });
+                    
+                    showToast("Category deleted successfully!", "success");
+                } catch (error) {
+                    console.error("Error deleting category:", error);
+                    showToast("Error deleting category. Please try again.", "error");
                     throw error;
                 }
             };
@@ -460,13 +516,22 @@
 
             // 本地儲存操作函式
             window.addBookToFirestore = async (bookData) => {
+                // 檢查是否有重複的 ISBN
+                if (bookData.isbn) {
+                    const duplicateBook = window.books.find(book => book.isbn === bookData.isbn);
+                    if (duplicateBook) {
+                        showToast(`Book with ISBN ${bookData.isbn} already exists: "${duplicateBook.title}"`, "error");
+                        throw new Error("Duplicate ISBN");
+                    }
+                }
+                
                 const newBook = {
                     id: Date.now().toString(),
                     ...bookData,
                     createdAt: new Date()
                 };
-                books.push(newBook);
-                localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
+                window.books.push(newBook);
+                localStorage.setItem("myBookTrackerBooks", JSON.stringify(window.books));
                 renderBooks();
                 updateStats();
                 showToast("Book added successfully!", "success");
@@ -493,15 +558,41 @@
             };
 
             window.addCategoryToFirestore = async (categoryName) => {
-                if (!categories.includes(categoryName)) {
-                    categories.push(categoryName);
-                    localStorage.setItem("myBookTrackerCategories", JSON.stringify(categories.filter(c => c !== "all")));
+                if (!window.categories.includes(categoryName)) {
+                    window.categories.push(categoryName);
+                    localStorage.setItem("myBookTrackerCategories", JSON.stringify(window.categories.filter(c => c !== "all")));
                     renderCategories();
                     populateCategorySelects();
                     showToast("Category added successfully!", "success");
                 } else {
                     showToast("Category already exists!", "error");
                 }
+            };
+
+            window.deleteCategoryFromFirestore = async (categoryName) => {
+                // 將該分類下的所有書籍改為 "uncategorized"
+                window.books.forEach(book => {
+                    if (book.category === categoryName) {
+                        book.category = "uncategorized";
+                    }
+                });
+                
+                // 從分類列表中移除該分類
+                window.categories = window.categories.filter(cat => cat !== categoryName);
+                
+                // 更新本地儲存
+                localStorage.setItem("myBookTrackerBooks", JSON.stringify(window.books));
+                localStorage.setItem("myBookTrackerCategories", JSON.stringify(window.categories.filter(c => c !== "all")));
+                
+                // 如果當前選中的分類被刪除，切換到 "all"
+                if (currentCategory === categoryName) {
+                    currentCategory = "all";
+                }
+                
+                renderBooks();
+                renderCategories();
+                populateCategorySelects();
+                showToast("Category deleted successfully!", "success");
             };
 
             // 初始渲染
@@ -521,10 +612,30 @@
                 
                 if (data.items && data.items.length > 0) {
                     const book = data.items[0].volumeInfo;
+                    
+                    // 優先使用更高品質的圖片
+                    let coverUrl = null;
+                    if (book.imageLinks) {
+                        // 按品質優先順序選擇圖片
+                        coverUrl = book.imageLinks.extraLarge || 
+                                  book.imageLinks.large || 
+                                  book.imageLinks.medium || 
+                                  book.imageLinks.small || 
+                                  book.imageLinks.thumbnail || 
+                                  book.imageLinks.smallThumbnail;
+                        
+                        // 如果有圖片 URL，將 http 改為 https 並移除 zoom 參數以獲得更好品質
+                        if (coverUrl) {
+                            coverUrl = coverUrl.replace('http://', 'https://');
+                            // 移除可能的 zoom 參數，使用原始尺寸
+                            coverUrl = coverUrl.replace(/&zoom=\d+/, '');
+                        }
+                    }
+                    
                     return {
                         title: book.title || "Unknown Title",
                         author: book.authors ? book.authors.join(", ") : "Unknown Author",
-                        cover: book.imageLinks ? book.imageLinks.thumbnail : null,
+                        cover: coverUrl,
                         isbn: isbn
                     };
                 } else {
@@ -535,10 +646,17 @@
                     const bookKey = `ISBN:${isbn}`;
                     if (openLibData[bookKey]) {
                         const book = openLibData[bookKey];
+                        
+                        // Open Library 也優先使用更高品質的圖片
+                        let coverUrl = null;
+                        if (book.cover) {
+                            coverUrl = book.cover.large || book.cover.medium || book.cover.small;
+                        }
+                        
                         return {
                             title: book.title || "Unknown Title",
                             author: book.authors ? book.authors.map(a => a.name).join(", ") : "Unknown Author",
-                            cover: book.cover ? book.cover.medium : null,
+                            cover: coverUrl,
                             isbn: isbn
                         };
                     }
@@ -668,24 +786,30 @@
             if (currentView === "grid") {
                 bookCard.innerHTML = `
                     <div class="relative">
-                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" alt="${book.title}" class="w-full h-48 object-cover">
+                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" 
+                             alt="${book.title}" 
+                             class="w-full h-64 object-contain bg-gray-50"
+                             style="aspect-ratio: 3/4;">
                         <span class="absolute top-2 right-2 px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">${book.category || "uncategorized"}</span>
                     </div>
-                    <div class="p-4">
-                        <h3 class="font-semibold text-lg mb-1 truncate">${book.title}</h3>
-                        <p class="text-gray-600 text-sm mb-3 truncate">${book.author}</p>
+                    <div class="p-3">
+                        <h3 class="font-semibold text-base mb-1 line-clamp-2 leading-tight">${book.title}</h3>
+                        <p class="text-gray-600 text-sm line-clamp-1">${book.author}</p>
                     </div>
                 `;
             } else {
                 bookCard.innerHTML = `
                     <div class="flex-shrink-0">
-                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" alt="${book.title}" class="w-24 h-36 object-cover">
+                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" 
+                             alt="${book.title}" 
+                             class="w-20 h-28 object-contain bg-gray-50 rounded"
+                             style="aspect-ratio: 3/4;">
                     </div>
-                    <div class="p-4 flex-grow">
+                    <div class="p-3 flex-grow">
                         <div class="flex justify-between">
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">${book.title}</h3>
-                                <p class="text-gray-600 text-sm mb-2">${book.author}</p>
+                            <div class="flex-grow">
+                                <h3 class="font-semibold text-base mb-1 line-clamp-2 leading-tight">${book.title}</h3>
+                                <p class="text-gray-600 text-sm mb-2 line-clamp-1">${book.author}</p>
                                 <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">${book.category || "uncategorized"}</span>
                             </div>
                         </div>
@@ -711,12 +835,55 @@
             categoriesList.innerHTML = "";
             window.categories.forEach(cat => {
                 const li = document.createElement("li");
-                const a = document.createElement("a");
-                a.href = "#";
-                a.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
-                a.dataset.category = cat;
-                a.textContent = cat.charAt(0).toUpperCase() + cat.slice(1); // Capitalize first letter
-                li.appendChild(a);
+                
+                if (cat === "all") {
+                    // "All" 分類不需要刪除按鈕，只顯示總書籍數
+                    const a = document.createElement("a");
+                    a.href = "#";
+                    a.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
+                    a.dataset.category = cat;
+                    
+                    const totalBooks = window.books.length;
+                    a.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span>All</span>
+                            <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${totalBooks}</span>
+                        </div>
+                    `;
+                    li.appendChild(a);
+                } else {
+                    // 其他分類顯示書籍數量和刪除按鈕
+                    const categoryBooks = window.books.filter(book => (book.category || "uncategorized") === cat);
+                    const bookCount = categoryBooks.length;
+                    
+                    const categoryContainer = document.createElement("div");
+                    categoryContainer.className = "flex items-center justify-between group";
+                    
+                    const a = document.createElement("a");
+                    a.href = "#";
+                    a.className = `category-link flex-grow px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
+                    a.dataset.category = cat;
+                    a.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span>${cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
+                            <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${bookCount}</span>
+                        </div>
+                    `;
+                    
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.className = "ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity";
+                    deleteBtn.innerHTML = '<i class="fas fa-trash text-xs"></i>';
+                    deleteBtn.title = `Delete ${cat} category`;
+                    deleteBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        deleteCategory(cat);
+                    });
+                    
+                    categoryContainer.appendChild(a);
+                    categoryContainer.appendChild(deleteBtn);
+                    li.appendChild(categoryContainer);
+                }
+                
                 categoriesList.appendChild(li);
             });
         }
@@ -951,6 +1118,17 @@
                 closeAddCategoryModal();
             } catch (error) {
                 showToast("Error adding category. Please try again.", "error");
+            }
+        }
+
+        // Delete category
+        async function deleteCategory(categoryName) {
+            if (confirm(`Are you sure you want to delete the "${categoryName}" category? All books in this category will be moved to "Uncategorized".`)) {
+                try {
+                    await window.deleteCategoryFromFirestore(categoryName);
+                } catch (error) {
+                    showToast("Error deleting category. Please try again.", "error");
+                }
             }
         }
 
