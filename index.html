@@ -101,11 +101,12 @@
         <!-- Header -->
         <header class="bg-indigo-600 text-white shadow-md">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-book-open text-2xl"></i>
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-book-open text-3xl"></i>
                     <h1 class="text-2xl font-bold">MyBookTracker</h1>
-                    <div class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-full font-medium text-sm">
-                        Total Books: <span id="totalBooks">0</span>
+                    <div class="ml-6 bg-white text-indigo-600 px-4 py-2 rounded-full font-semibold text-base flex items-center">
+                        <i class="fas fa-books mr-2 text-lg"></i>
+                        Total Books: <span id="totalBooks" class="ml-1 font-bold">0</span>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -289,7 +290,11 @@
                     <div>
                         <h2 id="detailsBookTitle" class="text-2xl font-bold mb-1">Book Title</h2>
                         <p id="detailsBookAuthor" class="text-gray-600 mb-3">Author Name</p>
-                        <p id="detailsBookCategory" class="text-sm text-indigo-600 mb-3">Category</p>
+                        <p id="detailsBookCategory" class="text-sm text-indigo-600 mb-2">Category</p>
+                        <div class="mb-3">
+                            <span class="text-sm text-gray-500">ISBN: </span>
+                            <span id="detailsBookISBN" class="text-sm text-gray-700">N/A</span>
+                        </div>
                         <div class="flex space-x-2">
                             <button id="editBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
                                 <i class="fas fa-edit mr-1"></i> Edit
@@ -300,6 +305,19 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cover Enlargement Modal -->
+    <div id="coverModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 hidden">
+        <div class="relative max-w-4xl max-h-full mx-4">
+            <button onclick="closeCoverModal()" class="absolute top-4 right-4 text-white hover:text-gray-300 text-2xl z-10 bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="text-center">
+                <img id="enlargedCover" src="" alt="Book Cover" class="max-w-full max-h-screen object-contain rounded-lg shadow-2xl">
+                <p id="coverTitle" class="text-white text-lg mt-4 font-semibold"></p>
             </div>
         </div>
     </div>
@@ -315,13 +333,42 @@
             </div>
             <div class="p-6">
                 <div class="mb-4">
-                    <label class="block text-gray-700 mb-2" for="newCategoryInput">Category Name</label>
-                    <input type="text" id="newCategoryInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Science Fiction">
+                    <label class="block text-gray-700 mb-2" for="categoryName">Category Name</label>
+                    <input type="text" id="categoryName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Science Fiction">
                 </div>
             </div>
             <div class="flex justify-end border-t px-6 py-4 space-x-3">
-                <button id="cancelAddCategoryBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button id="cancelCategoryBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
                 <button id="saveCategoryBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Category</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div id="categoryManagementModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div class="flex justify-between items-center border-b px-6 py-4">
+                <h3 class="text-xl font-semibold">Manage Categories</h3>
+                <button id="closeCategoryManagementBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <h4 class="text-lg font-medium mb-3">Existing Categories</h4>
+                    <div id="categoryManagementList" class="space-y-2 max-h-60 overflow-y-auto">
+                        <!-- Categories will be dynamically loaded here -->
+                    </div>
+                </div>
+                <div class="border-t pt-4">
+                    <h4 class="text-lg font-medium mb-3">Add New Category</h4>
+                    <div class="flex gap-2">
+                        <input type="text" id="newCategoryInput" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Category name">
+                        <button id="addNewCategoryBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            <i class="fas fa-plus mr-1"></i>Add
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -388,12 +435,28 @@
             // Firebase 資料庫操作函式
             window.addBookToFirestore = async (bookData) => {
                 try {
-                    // 檢查是否有重複的 ISBN
+                    // 檢查是否有重複的 ISBN（絕對禁止）
                     if (bookData.isbn) {
-                        const duplicateBook = window.books.find(book => book.isbn === bookData.isbn);
-                        if (duplicateBook) {
-                            showToast(`Book with ISBN ${bookData.isbn} already exists: "${duplicateBook.title}"`, "error");
+                        const duplicateISBNBook = window.books.find(book => book.isbn === bookData.isbn);
+                        if (duplicateISBNBook) {
+                            showToast(`Book with ISBN ${bookData.isbn} already exists: "${duplicateISBNBook.title}"`, "error");
                             throw new Error("Duplicate ISBN");
+                        }
+                    }
+                    
+                    // 檢查是否有相同書名（詢問使用者）
+                    const duplicateTitleBook = window.books.find(book => 
+                        book.title.toLowerCase().trim() === bookData.title.toLowerCase().trim()
+                    );
+                    if (duplicateTitleBook) {
+                        const userConfirm = confirm(
+                            `A book with the same title already exists:\n\n` +
+                            `Existing: "${duplicateTitleBook.title}" by ${duplicateTitleBook.author}\n` +
+                            `New: "${bookData.title}" by ${bookData.author}\n\n` +
+                            `Do you want to add this book anyway?`
+                        );
+                        if (!userConfirm) {
+                            throw new Error("User cancelled duplicate title addition");
                         }
                     }
                     
@@ -404,8 +467,8 @@
                     showToast("Book added successfully!", "success");
                     return docRef.id;
                 } catch (error) {
-                    if (error.message === "Duplicate ISBN") {
-                        throw error; // 重新拋出重複 ISBN 錯誤
+                    if (error.message === "Duplicate ISBN" || error.message === "User cancelled duplicate title addition") {
+                        throw error; // 重新拋出這些特定錯誤
                     }
                     console.error("Error adding book:", error);
                     showToast("Error adding book. Please try again.", "error");
@@ -516,12 +579,28 @@
 
             // 本地儲存操作函式
             window.addBookToFirestore = async (bookData) => {
-                // 檢查是否有重複的 ISBN
+                // 檢查是否有重複的 ISBN（絕對禁止）
                 if (bookData.isbn) {
-                    const duplicateBook = window.books.find(book => book.isbn === bookData.isbn);
-                    if (duplicateBook) {
-                        showToast(`Book with ISBN ${bookData.isbn} already exists: "${duplicateBook.title}"`, "error");
+                    const duplicateISBNBook = window.books.find(book => book.isbn === bookData.isbn);
+                    if (duplicateISBNBook) {
+                        showToast(`Book with ISBN ${bookData.isbn} already exists: "${duplicateISBNBook.title}"`, "error");
                         throw new Error("Duplicate ISBN");
+                    }
+                }
+                
+                // 檢查是否有相同書名（詢問使用者）
+                const duplicateTitleBook = window.books.find(book => 
+                    book.title.toLowerCase().trim() === bookData.title.toLowerCase().trim()
+                );
+                if (duplicateTitleBook) {
+                    const userConfirm = confirm(
+                        `A book with the same title already exists:\n\n` +
+                        `Existing: "${duplicateTitleBook.title}" by ${duplicateTitleBook.author}\n` +
+                        `New: "${bookData.title}" by ${bookData.author}\n\n` +
+                        `Do you want to add this book anyway?`
+                    );
+                    if (!userConfirm) {
+                        throw new Error("User cancelled duplicate title addition");
                     }
                 }
                 
@@ -852,16 +931,13 @@
                     `;
                     li.appendChild(a);
                 } else {
-                    // 其他分類顯示書籍數量和刪除按鈕
+                    // 其他分類顯示書籍數量，移除刪除按鈕（將在分類管理中處理）
                     const categoryBooks = window.books.filter(book => (book.category || "uncategorized") === cat);
                     const bookCount = categoryBooks.length;
                     
-                    const categoryContainer = document.createElement("div");
-                    categoryContainer.className = "flex items-center justify-between group";
-                    
                     const a = document.createElement("a");
                     a.href = "#";
-                    a.className = `category-link flex-grow px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
+                    a.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
                     a.dataset.category = cat;
                     a.innerHTML = `
                         <div class="flex justify-between items-center">
@@ -870,22 +946,21 @@
                         </div>
                     `;
                     
-                    const deleteBtn = document.createElement("button");
-                    deleteBtn.className = "ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity";
-                    deleteBtn.innerHTML = '<i class="fas fa-trash text-xs"></i>';
-                    deleteBtn.title = `Delete ${cat} category`;
-                    deleteBtn.addEventListener("click", (e) => {
-                        e.stopPropagation();
-                        deleteCategory(cat);
-                    });
-                    
-                    categoryContainer.appendChild(a);
-                    categoryContainer.appendChild(deleteBtn);
-                    li.appendChild(categoryContainer);
+                    li.appendChild(a);
                 }
                 
                 categoriesList.appendChild(li);
             });
+            
+            // 新增分類管理按鈕
+            const manageLi = document.createElement("li");
+            manageLi.className = "mt-2";
+            const manageBtn = document.createElement("button");
+            manageBtn.className = "w-full text-left px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-gray-50 rounded-lg";
+            manageBtn.innerHTML = '<i class="fas fa-cog mr-2"></i>Manage Categories';
+            manageBtn.addEventListener("click", openCategoryManagement);
+            manageLi.appendChild(manageBtn);
+            categoriesList.appendChild(manageLi);
         }
 
         // Populate category selects in modals
@@ -1027,10 +1102,34 @@
             document.getElementById("detailsBookTitle").textContent = book.title;
             document.getElementById("detailsBookAuthor").textContent = book.author;
             document.getElementById("detailsBookCategory").textContent = book.category || "uncategorized";
-            document.getElementById("detailsBookCover").src = book.cover || "https://via.placeholder.com/300x450?text=No+Cover";
+            document.getElementById("detailsBookISBN").textContent = book.isbn || "N/A";
+            
+            const coverImg = document.getElementById("detailsBookCover");
+            coverImg.src = book.cover || "https://via.placeholder.com/300x450?text=No+Cover";
+            
+            // Add click event to cover for enlargement
+            coverImg.onclick = () => openCoverModal(book.cover || "https://via.placeholder.com/300x450?text=No+Cover", book.title);
+            coverImg.style.cursor = "pointer";
+            coverImg.title = "Click to enlarge";
             
             // Show modal
             bookDetailsModal.classList.remove("hidden");
+        }
+
+        // Open cover enlargement modal
+        function openCoverModal(coverUrl, bookTitle) {
+            const modal = document.getElementById("coverModal");
+            const enlargedCover = document.getElementById("enlargedCover");
+            const coverTitle = document.getElementById("coverTitle");
+            
+            enlargedCover.src = coverUrl;
+            coverTitle.textContent = bookTitle;
+            modal.classList.remove("hidden");
+        }
+
+        // Close cover enlargement modal
+        function closeCoverModal() {
+            document.getElementById("coverModal").classList.add("hidden");
         }
 
         // Close book details modal
@@ -1121,7 +1220,83 @@
             }
         }
 
-        // Delete category
+        // Open category management modal
+        function openCategoryManagement() {
+            renderCategoryManagementList();
+            document.getElementById("categoryManagementModal").classList.remove("hidden");
+        }
+
+        // Close category management modal
+        function closeCategoryManagement() {
+            document.getElementById("categoryManagementModal").classList.add("hidden");
+            document.getElementById("newCategoryInput").value = "";
+        }
+
+        // Render category management list
+        function renderCategoryManagementList() {
+            const list = document.getElementById("categoryManagementList");
+            list.innerHTML = "";
+            
+            window.categories.forEach(cat => {
+                if (cat === "all") return; // Skip "All" category
+                
+                const categoryBooks = window.books.filter(book => (book.category || "uncategorized") === cat);
+                const bookCount = categoryBooks.length;
+                
+                const div = document.createElement("div");
+                div.className = "flex items-center justify-between p-3 bg-gray-50 rounded-lg";
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="font-medium">${cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
+                        <span class="ml-2 text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${bookCount} books</span>
+                    </div>
+                    <button onclick="confirmDeleteCategory('${cat}')" class="px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg text-sm">
+                        <i class="fas fa-trash mr-1"></i>Delete
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // Confirm delete category
+        function confirmDeleteCategory(categoryName) {
+            const categoryBooks = window.books.filter(book => (book.category || "uncategorized") === categoryName);
+            const bookCount = categoryBooks.length;
+            
+            let message = `Are you sure you want to delete the "${categoryName}" category?`;
+            if (bookCount > 0) {
+                message += `\n\nThis category contains ${bookCount} book(s). These books will be moved to "Uncategorized".`;
+            }
+            
+            if (confirm(message)) {
+                deleteCategory(categoryName);
+            }
+        }
+
+        // Add new category from management modal
+        async function addNewCategoryFromManagement() {
+            const input = document.getElementById("newCategoryInput");
+            const categoryName = input.value.trim().toLowerCase();
+            
+            if (!categoryName) {
+                showToast("Please enter a category name", "error");
+                return;
+            }
+            
+            if (window.categories.includes(categoryName)) {
+                showToast("Category already exists", "error");
+                return;
+            }
+            
+            try {
+                await window.addCategoryToFirestore(categoryName);
+                input.value = "";
+                renderCategoryManagementList();
+                showToast("Category added successfully!", "success");
+            } catch (error) {
+                showToast("Error adding category. Please try again.", "error");
+            }
+        }
         async function deleteCategory(categoryName) {
             if (confirm(`Are you sure you want to delete the "${categoryName}" category? All books in this category will be moved to "Uncategorized".`)) {
                 try {
@@ -1188,6 +1363,16 @@
             saveBookBtn.addEventListener("click", saveBook);
             searchIsbnBtn.addEventListener("click", searchByISBN);
             addFromIsbnBtn.addEventListener("click", addBookFromISBN);
+            
+            // Add category modal
+            document.getElementById("addCategoryBtn").addEventListener("click", openAddCategoryModal);
+            document.getElementById("closeCategoryModalBtn").addEventListener("click", closeAddCategoryModal);
+            document.getElementById("cancelCategoryBtn").addEventListener("click", closeAddCategoryModal);
+            document.getElementById("saveCategoryBtn").addEventListener("click", saveCategory);
+            
+            // Category management modal
+            document.getElementById("closeCategoryManagementBtn").addEventListener("click", closeCategoryManagement);
+            document.getElementById("addNewCategoryBtn").addEventListener("click", addNewCategoryFromManagement);
             
             // Book details modal
             closeDetailsModalBtn.addEventListener("click", closeBookDetailsModal);
