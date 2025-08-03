@@ -113,8 +113,8 @@
                     <button id="mobileMenuBtn" class="md:hidden text-white p-2">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <button id="addBookBtn" class="bg-white text-indigo-600 px-4 py-2 rounded-full font-medium hover:bg-indigo-50 transition">
-                        <i class="fas fa-plus mr-2"></i> Add Book
+                    <button id="scanBarcodeBtn" class="bg-white text-indigo-600 px-4 py-2 rounded-full font-medium hover:bg-indigo-50 transition">
+                        <i class="fas fa-camera mr-2"></i> Scan Barcode
                     </button>
                     <button id="addByIsbnBtn" class="bg-indigo-500 text-white px-4 py-2 rounded-full font-medium hover:bg-indigo-400 transition">
                         <i class="fas fa-barcode mr-2"></i> Add by ISBN
@@ -128,11 +128,11 @@
             <!-- Sidebar -->
             <aside class="w-64 bg-white shadow-sm p-4 hidden md:block">
                 <h3 class="font-semibold text-lg mb-4 text-gray-700">Categories</h3>
-                <ul class="space-y-2" id="categoriesList">
+                <ul class="space-y-1" id="categoriesList">
                     <li><a href="#" class="category-link block px-3 py-2 rounded-lg bg-indigo-100 text-indigo-700" data-category="all">All</a></li>
                 </ul>
-                <button id="addCategoryBtn" class="mt-4 w-full bg-indigo-100 text-indigo-600 px-3 py-2 rounded-lg font-medium hover:bg-indigo-200 transition">
-                    <i class="fas fa-plus mr-2"></i> Add Category
+                <button id="manageCategoriesBtn" class="mt-4 w-full bg-gray-100 text-gray-600 px-3 py-2 rounded-lg font-medium hover:bg-gray-200 transition">
+                    <i class="fas fa-cog mr-2"></i> Manage Categories
                 </button>
             </aside>
 
@@ -182,9 +182,9 @@
                     <div id="emptyState" class="hidden text-center py-12">
                         <i class="fas fa-book-open text-6xl text-gray-300 mb-4"></i>
                         <h3 class="text-xl font-semibold text-gray-600 mb-2">No books yet</h3>
-                        <p class="text-gray-500 mb-4">Start building your library by adding your first book!</p>
-                        <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition" onclick="openAddBookModal()">
-                            <i class="fas fa-plus mr-2"></i> Add Your First Book
+                        <p class="text-gray-500 mb-4">Start building your library by scanning a barcode or entering an ISBN!</p>
+                        <button class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition" onclick="document.getElementById('scanBarcodeBtn').click()">
+                            <i class="fas fa-camera mr-2"></i> Scan Barcode
                         </button>
                     </div>
 
@@ -193,47 +193,6 @@
                     </div>
                 </div>
             </main>
-        </div>
-    </div>
-
-    <!-- Add Book Modal -->
-    <div id="addBookModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div class="flex justify-between items-center border-b px-6 py-4">
-                <h3 class="text-xl font-semibold">Add New Book</h3>
-                <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-6">
-                <form id="addBookForm">
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="bookTitle">Title</label>
-                        <input type="text" id="bookTitle" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="bookAuthor">Author</label>
-                        <input type="text" id="bookAuthor" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="bookCategory">Category</label>
-                        <select id="bookCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <!-- Categories will be dynamically loaded here -->
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-gray-700 mb-2" for="bookCover">Cover URL</label>
-                        <input type="text" id="bookCover" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/book-cover.jpg">
-                    </div>
-                </form>
-            </div>
-            <div class="flex justify-end border-t px-6 py-4 space-x-3">
-                <button id="cancelAddBookBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button id="saveBookBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center">
-                    <span id="saveBookText">Save Book</span>
-                    <div id="saveBookSpinner" class="hidden ml-2 spinner"></div>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -287,23 +246,65 @@
                     <div class="flex-shrink-0">
                         <img id="detailsBookCover" src="https://via.placeholder.com/150x200" alt="Book Cover" class="w-32 h-48 object-cover rounded-lg shadow-sm">
                     </div>
-                    <div>
+                    <div class="flex-1">
                         <h2 id="detailsBookTitle" class="text-2xl font-bold mb-1">Book Title</h2>
                         <p id="detailsBookAuthor" class="text-gray-600 mb-3">Author Name</p>
-                        <p id="detailsBookCategory" class="text-sm text-indigo-600 mb-2">Category</p>
+                        
+                        <!-- Category modification section -->
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-500 mb-1">Category:</label>
+                            <select id="detailsBookCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                                <!-- Categories will be populated dynamically -->
+                            </select>
+                        </div>
+                        
                         <div class="mb-3">
                             <span class="text-sm text-gray-500">ISBN: </span>
                             <span id="detailsBookISBN" class="text-sm text-gray-700">N/A</span>
                         </div>
                         <div class="flex space-x-2">
-                            <button id="editBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
-                                <i class="fas fa-edit mr-1"></i> Edit
+                            <button id="saveBookChangesBtn" class="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                                <i class="fas fa-save mr-1"></i> Save Changes
                             </button>
                             <button id="deleteBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
                                 <i class="fas fa-trash mr-1"></i> Delete
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Scanner Modal -->
+    <div id="barcodeScannerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center border-b px-6 py-4">
+                <h3 class="text-xl font-semibold">Scan Barcode</h3>
+                <button id="closeScannerModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-4">
+                    <div id="scannerContainer" class="relative bg-gray-100 rounded-lg overflow-hidden" style="height: 300px;">
+                        <video id="scannerVideo" class="w-full h-full object-cover" autoplay muted playsinline></video>
+                        <div id="scannerOverlay" class="absolute inset-0 flex items-center justify-center">
+                            <div class="border-2 border-red-500 w-64 h-32 rounded-lg"></div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Position the barcode within the red frame</p>
+                </div>
+                <div id="scannerStatus" class="text-center mb-4">
+                    <p class="text-sm text-gray-600">Initializing camera...</p>
+                </div>
+                <div class="flex justify-center space-x-3">
+                    <button id="stopScannerBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <i class="fas fa-stop mr-2"></i>Stop Scanner
+                    </button>
+                    <button id="manualIsbnBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        <i class="fas fa-keyboard mr-2"></i>Enter ISBN Manually
+                    </button>
                 </div>
             </div>
         </div>
@@ -909,58 +910,138 @@
             totalBooksElement.textContent = window.books.length;
         }
 
-        // Render categories in sidebar
+        // Render categories in sidebar with hierarchical support
         function renderCategories() {
             categoriesList.innerHTML = "";
-            window.categories.forEach(cat => {
-                const li = document.createElement("li");
+            
+            // Parse categories into hierarchical structure
+            const categoryTree = buildCategoryTree(window.categories);
+            
+            // Render "All" category first
+            const allLi = document.createElement("li");
+            const allA = document.createElement("a");
+            allA.href = "#";
+            allA.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === "all" ? "bg-indigo-100 text-indigo-700" : ""}`;
+            allA.dataset.category = "all";
+            
+            const totalBooks = window.books.length;
+            allA.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span>All</span>
+                    <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${totalBooks}</span>
+                </div>
+            `;
+            allLi.appendChild(allA);
+            categoriesList.appendChild(allLi);
+            
+            // Render hierarchical categories
+            renderCategoryTree(categoryTree, categoriesList, 0);
+        }
+
+        // Build category tree from flat category list
+        function buildCategoryTree(categories) {
+            const tree = {};
+            
+            categories.filter(cat => cat !== "all").forEach(cat => {
+                const parts = cat.split('/');
+                let current = tree;
                 
-                if (cat === "all") {
-                    // "All" 分類不需要刪除按鈕，只顯示總書籍數
-                    const a = document.createElement("a");
-                    a.href = "#";
-                    a.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
-                    a.dataset.category = cat;
-                    
-                    const totalBooks = window.books.length;
-                    a.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <span>All</span>
-                            <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${totalBooks}</span>
-                        </div>
-                    `;
-                    li.appendChild(a);
-                } else {
-                    // 其他分類顯示書籍數量，移除刪除按鈕（將在分類管理中處理）
-                    const categoryBooks = window.books.filter(book => (book.category || "uncategorized") === cat);
-                    const bookCount = categoryBooks.length;
-                    
-                    const a = document.createElement("a");
-                    a.href = "#";
-                    a.className = `category-link block px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === cat ? "bg-indigo-100 text-indigo-700" : ""}`;
-                    a.dataset.category = cat;
-                    a.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <span>${cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
-                            <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${bookCount}</span>
-                        </div>
-                    `;
-                    
-                    li.appendChild(a);
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    if (!current[part]) {
+                        current[part] = {
+                            children: {},
+                            fullPath: parts.slice(0, i + 1).join('/'),
+                            level: i
+                        };
+                    }
+                    current = current[part].children;
                 }
-                
-                categoriesList.appendChild(li);
             });
             
-            // 新增分類管理按鈕
-            const manageLi = document.createElement("li");
-            manageLi.className = "mt-2";
-            const manageBtn = document.createElement("button");
-            manageBtn.className = "w-full text-left px-3 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-gray-50 rounded-lg";
-            manageBtn.innerHTML = '<i class="fas fa-cog mr-2"></i>Manage Categories';
-            manageBtn.addEventListener("click", openCategoryManagement);
-            manageLi.appendChild(manageBtn);
-            categoriesList.appendChild(manageLi);
+            return tree;
+        }
+
+        // Render category tree recursively
+        function renderCategoryTree(tree, container, level) {
+            Object.keys(tree).forEach(categoryName => {
+                const categoryData = tree[categoryName];
+                const fullPath = categoryData.fullPath;
+                const hasChildren = Object.keys(categoryData.children).length > 0;
+                
+                const li = document.createElement("li");
+                li.className = `category-item level-${level}`;
+                
+                const categoryBooks = window.books.filter(book => {
+                    const bookCategory = book.category || "uncategorized";
+                    return bookCategory === fullPath || bookCategory.startsWith(fullPath + '/');
+                });
+                const bookCount = categoryBooks.length;
+                
+                const categoryElement = document.createElement("div");
+                categoryElement.className = "flex items-center";
+                
+                // Add indentation for nested categories
+                const indent = level * 16;
+                categoryElement.style.paddingLeft = `${indent}px`;
+                
+                if (hasChildren) {
+                    // Add collapse/expand button for parent categories
+                    const toggleBtn = document.createElement("button");
+                    toggleBtn.className = "category-toggle mr-1 p-1 text-gray-400 hover:text-gray-600";
+                    toggleBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
+                    toggleBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        toggleCategory(li, toggleBtn);
+                    });
+                    categoryElement.appendChild(toggleBtn);
+                } else {
+                    // Add spacing for leaf categories
+                    const spacer = document.createElement("div");
+                    spacer.className = "w-6";
+                    categoryElement.appendChild(spacer);
+                }
+                
+                const a = document.createElement("a");
+                a.href = "#";
+                a.className = `category-link flex-1 px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === fullPath ? "bg-indigo-100 text-indigo-700" : ""}`;
+                a.dataset.category = fullPath;
+                a.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span>${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)}</span>
+                        <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${bookCount}</span>
+                    </div>
+                `;
+                
+                categoryElement.appendChild(a);
+                li.appendChild(categoryElement);
+                
+                // Add children container
+                if (hasChildren) {
+                    const childrenContainer = document.createElement("ul");
+                    childrenContainer.className = "category-children space-y-1 mt-1 hidden";
+                    renderCategoryTree(categoryData.children, childrenContainer, level + 1);
+                    li.appendChild(childrenContainer);
+                }
+                
+                container.appendChild(li);
+            });
+        }
+
+        // Toggle category collapse/expand
+        function toggleCategory(categoryItem, toggleBtn) {
+            const childrenContainer = categoryItem.querySelector('.category-children');
+            const icon = toggleBtn.querySelector('i');
+            
+            if (childrenContainer.classList.contains('hidden')) {
+                childrenContainer.classList.remove('hidden');
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                childrenContainer.classList.add('hidden');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
         }
 
         // Populate category selects in modals
@@ -1101,8 +1182,33 @@
             // Update modal content
             document.getElementById("detailsBookTitle").textContent = book.title;
             document.getElementById("detailsBookAuthor").textContent = book.author;
-            document.getElementById("detailsBookCategory").textContent = book.category || "uncategorized";
             document.getElementById("detailsBookISBN").textContent = book.isbn || "N/A";
+            
+            // Populate category select
+            const categorySelect = document.getElementById("detailsBookCategory");
+            categorySelect.innerHTML = "";
+            
+            // Add all available categories to select
+            window.categories.filter(cat => cat !== "all").forEach(cat => {
+                const option = document.createElement("option");
+                option.value = cat;
+                option.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                if (cat === (book.category || "uncategorized")) {
+                    option.selected = true;
+                }
+                categorySelect.appendChild(option);
+            });
+            
+            // Add uncategorized if not present
+            if (!window.categories.includes("uncategorized")) {
+                const uncategorizedOption = document.createElement("option");
+                uncategorizedOption.value = "uncategorized";
+                uncategorizedOption.textContent = "Uncategorized";
+                if ("uncategorized" === (book.category || "uncategorized")) {
+                    uncategorizedOption.selected = true;
+                }
+                categorySelect.prepend(uncategorizedOption);
+            }
             
             const coverImg = document.getElementById("detailsBookCover");
             coverImg.src = book.cover || "https://via.placeholder.com/300x450?text=No+Cover";
@@ -1122,6 +1228,10 @@
             const enlargedCover = document.getElementById("enlargedCover");
             const coverTitle = document.getElementById("coverTitle");
             
+            // Hide book details modal when opening cover modal
+            const bookDetailsModal = document.getElementById("bookDetailsModal");
+            bookDetailsModal.classList.add("hidden");
+            
             enlargedCover.src = coverUrl;
             coverTitle.textContent = bookTitle;
             modal.classList.remove("hidden");
@@ -1129,7 +1239,15 @@
 
         // Close cover enlargement modal
         function closeCoverModal() {
-            document.getElementById("coverModal").classList.add("hidden");
+            const coverModal = document.getElementById("coverModal");
+            const bookDetailsModal = document.getElementById("bookDetailsModal");
+            
+            coverModal.classList.add("hidden");
+            
+            // Restore book details modal when closing cover modal
+            if (currentSelectedBook) {
+                bookDetailsModal.classList.remove("hidden");
+            }
         }
 
         // Close book details modal
@@ -1138,40 +1256,59 @@
             currentSelectedBook = null;
         }
 
-        // Save new book (manual add)
-        async function saveBook() {
-            const title = document.getElementById("bookTitle").value.trim();
-            const author = document.getElementById("bookAuthor").value.trim();
-            const category = document.getElementById("bookCategory").value;
-            const cover = document.getElementById("bookCover").value.trim();
-            
-            if (!title || !author) {
-                showToast("Please fill in all required fields", "error");
-                return;
-            }
+        // Open barcode scanner modal
+        function openBarcodeScannerModal() {
+            const modal = document.getElementById("barcodeScannerModal");
+            modal.classList.remove("hidden");
+            startBarcodeScanner();
+        }
 
-            const saveBtn = document.getElementById("saveBookBtn");
-            const saveText = document.getElementById("saveBookText");
-            const saveSpinner = document.getElementById("saveBookSpinner");
-            
-            saveText.textContent = "Saving...";
-            saveSpinner.classList.remove("hidden");
-            saveBtn.disabled = true;
+        // Close barcode scanner modal
+        function closeBarcodeScannerModal() {
+            const modal = document.getElementById("barcodeScannerModal");
+            modal.classList.add("hidden");
+            stopBarcodeScanner();
+        }
+
+        // Start barcode scanner
+        async function startBarcodeScanner() {
+            const video = document.getElementById("scannerVideo");
+            const status = document.getElementById("scannerStatus");
             
             try {
-                await window.addBookToFirestore({
-                    title,
-                    author,
-                    category,
-                    cover: cover || null
+                status.innerHTML = '<p class="text-sm text-gray-600">Starting camera...</p>';
+                
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment', // Use back camera if available
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
                 });
-                closeAddBookModal();
+                
+                video.srcObject = stream;
+                status.innerHTML = '<p class="text-sm text-green-600">Camera ready! Position barcode in the frame</p>';
+                
+                // Start scanning (simplified implementation)
+                // Note: In a real implementation, you would use a barcode scanning library like QuaggaJS or ZXing
+                status.innerHTML = '<p class="text-sm text-blue-600">Scanning for barcodes... <br><small>This is a demo - click "Enter ISBN Manually" to continue</small></p>';
+                
             } catch (error) {
-                showToast("Error saving book. Please try again.", "error");
-            } finally {
-                saveText.textContent = "Save Book";
-                saveSpinner.classList.add("hidden");
-                saveBtn.disabled = false;
+                console.error('Error accessing camera:', error);
+                status.innerHTML = '<p class="text-sm text-red-600">Camera access denied or not available. Please use manual ISBN entry.</p>';
+            }
+        }
+
+        // Stop barcode scanner
+        function stopBarcodeScanner() {
+            const video = document.getElementById("scannerVideo");
+            const stream = video.srcObject;
+            
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
             }
         }
 
@@ -1186,6 +1323,34 @@
                 } catch (error) {
                     showToast("Error deleting book. Please try again.", "error");
                 }
+            }
+        }
+
+        // Save book changes (category modification)
+        async function saveBookChanges() {
+            if (!currentSelectedBook) return;
+            
+            const newCategory = document.getElementById("detailsBookCategory").value;
+            
+            if (newCategory === currentSelectedBook.category) {
+                showToast("No changes to save", "info");
+                return;
+            }
+            
+            try {
+                const updatedBook = {
+                    ...currentSelectedBook,
+                    category: newCategory
+                };
+                
+                await window.updateBookInFirestore(currentSelectedBook.id, updatedBook);
+                showToast("Book category updated successfully!", "success");
+                
+                // Update current selected book
+                currentSelectedBook.category = newCategory;
+                
+            } catch (error) {
+                showToast("Error updating book. Please try again.", "error");
             }
         }
 
@@ -1354,29 +1519,30 @@
         // Setup event listeners
         function setupEventListeners() {
             // Add book modal
-            addBookBtn.addEventListener("click", openAddBookModal);
+            document.getElementById("scanBarcodeBtn").addEventListener("click", openBarcodeScannerModal);
             addByIsbnBtn.addEventListener("click", openAddByIsbnModal);
-            closeModalBtn.addEventListener("click", closeAddBookModal);
             closeIsbnModalBtn.addEventListener("click", closeAddByIsbnModal);
-            cancelAddBookBtn.addEventListener("click", closeAddBookModal);
             cancelIsbnBtn.addEventListener("click", closeAddByIsbnModal);
-            saveBookBtn.addEventListener("click", saveBook);
             searchIsbnBtn.addEventListener("click", searchByISBN);
             addFromIsbnBtn.addEventListener("click", addBookFromISBN);
             
-            // Add category modal
-            document.getElementById("addCategoryBtn").addEventListener("click", openAddCategoryModal);
-            document.getElementById("closeCategoryModalBtn").addEventListener("click", closeAddCategoryModal);
-            document.getElementById("cancelCategoryBtn").addEventListener("click", closeAddCategoryModal);
-            document.getElementById("saveCategoryBtn").addEventListener("click", saveCategory);
+            // Barcode scanner modal
+            document.getElementById("closeScannerModalBtn").addEventListener("click", closeBarcodeScannerModal);
+            document.getElementById("stopScannerBtn").addEventListener("click", closeBarcodeScannerModal);
+            document.getElementById("manualIsbnBtn").addEventListener("click", () => {
+                closeBarcodeScannerModal();
+                openAddByIsbnModal();
+            });
             
             // Category management modal
+            document.getElementById("manageCategoriesBtn").addEventListener("click", openCategoryManagement);
             document.getElementById("closeCategoryManagementBtn").addEventListener("click", closeCategoryManagement);
             document.getElementById("addNewCategoryBtn").addEventListener("click", addNewCategoryFromManagement);
             
             // Book details modal
             closeDetailsModalBtn.addEventListener("click", closeBookDetailsModal);
             document.getElementById("deleteBookBtn").addEventListener("click", deleteBook);
+            document.getElementById("saveBookChangesBtn").addEventListener("click", saveBookChanges);
             
             // View toggle
             gridViewBtn.addEventListener("click", () => {
