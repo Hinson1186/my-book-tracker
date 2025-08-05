@@ -210,13 +210,18 @@
                     <label class="block text-gray-700 mb-2" for="isbnInput">ISBN</label>
                     <input type="text" id="isbnInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter ISBN (10 or 13 digits)">
                 </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2" for="isbnCategorySelect">Category</label>
+                    <select id="isbnCategorySelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="uncategorized">Uncategorized</option>
+                    </select>
+                </div>
                 <div id="bookPreview" class="hidden mb-4 p-4 border border-gray-200 rounded-lg">
                     <div class="flex gap-4">
-                        <img id="previewCover" src="" alt="Book Cover" class="w-16 h-24 object-cover rounded">
-                        <div>
+                        <img id="previewCover" src="" alt="Book Cover" class="w-16 h-24 object-cover rounded cursor-pointer" onclick="openCoverModal(this.src)">
+                        <div class="flex-1">
                             <h4 id="previewTitle" class="font-semibold"></h4>
                             <p id="previewAuthor" class="text-gray-600 text-sm"></p>
-                            <select id="previewCategory" class="mt-2 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
                         </div>
                     </div>
                 </div>
@@ -712,6 +717,11 @@
                         }
                     }
                     
+                    // 如果 Google Books 沒有封面，嘗試其他來源
+                    if (!coverUrl) {
+                        coverUrl = await findAlternativeCover(isbn, book.title, book.authors);
+                    }
+                    
                     return {
                         title: book.title || "Unknown Title",
                         author: book.authors ? book.authors.join(", ") : "Unknown Author",
@@ -733,6 +743,11 @@
                             coverUrl = book.cover.large || book.cover.medium || book.cover.small;
                         }
                         
+                        // 如果 Open Library 也沒有封面，嘗試其他來源
+                        if (!coverUrl) {
+                            coverUrl = await findAlternativeCover(isbn, book.title, book.authors ? book.authors.map(a => a.name) : []);
+                        }
+                        
                         return {
                             title: book.title || "Unknown Title",
                             author: book.authors ? book.authors.map(a => a.name).join(", ") : "Unknown Author",
@@ -748,6 +763,48 @@
                 throw error;
             }
         };
+
+        // 尋找替代封面來源
+        async function findAlternativeCover(isbn, title, authors) {
+            try {
+                // 嘗試 Open Library Covers API
+                const openLibCoverUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+                if (await isImageAvailable(openLibCoverUrl)) {
+                    return openLibCoverUrl;
+                }
+                
+                // 嘗試第三方 bookcover API（如果有書名和作者）
+                if (title && authors && authors.length > 0) {
+                    try {
+                        const bookCoverApiUrl = `https://bookcover.longitood.com/bookcover?book_title=${encodeURIComponent(title)}&author_name=${encodeURIComponent(authors[0])}`;
+                        const response = await fetch(bookCoverApiUrl);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.url && await isImageAvailable(data.url)) {
+                                return data.url;
+                            }
+                        }
+                    } catch (e) {
+                        console.log("Third-party API failed, continuing...");
+                    }
+                }
+                
+                return null; // 沒有找到可用的封面
+            } catch (error) {
+                console.error("Error finding alternative cover:", error);
+                return null;
+            }
+        }
+
+        // 檢查圖片是否可用
+        async function isImageAvailable(url) {
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                return response.ok && response.headers.get('content-type')?.startsWith('image/');
+            } catch (error) {
+                return false;
+            }
+        }
 
         // 全域變數和函式
         window.books = books;
@@ -1002,18 +1059,17 @@
                     categoryElement.appendChild(spacer);
                 }
                 
-                const a = document.createElement("a");
-                a.href = "#";
-                a.className = `category-link flex-1 px-3 py-2 rounded-lg hover:bg-gray-100 ${currentCategory === fullPath ? "bg-indigo-100 text-indigo-700" : ""}`;
-                a.dataset.category = fullPath;
-                a.innerHTML = `
+                const categoryDiv = document.createElement("div");
+                categoryDiv.className = `category-link flex-1 px-3 py-2 rounded-lg hover:bg-gray-100 cursor-pointer ${currentCategory === fullPath ? "bg-indigo-100 text-indigo-700" : ""}`;
+                categoryDiv.dataset.category = fullPath;
+                categoryDiv.innerHTML = `
                     <div class="flex justify-between items-center">
                         <span>${categoryName.charAt(0).toUpperCase() + categoryName.slice(1)}</span>
                         <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${bookCount}</span>
                     </div>
                 `;
                 
-                categoryElement.appendChild(a);
+                categoryElement.appendChild(categoryDiv);
                 li.appendChild(categoryElement);
                 
                 // Add children container
@@ -1046,37 +1102,40 @@
 
         // Populate category selects in modals
         function populateCategorySelects() {
-            const bookCategorySelect = document.getElementById("bookCategory");
-            const previewCategorySelect = document.getElementById("previewCategory");
+            const isbnCategorySelect = document.getElementById("isbnCategorySelect");
+            const detailsCategorySelect = document.getElementById("detailsBookCategory");
 
-            // Clear existing options except default
-            bookCategorySelect.innerHTML = "";
-            previewCategorySelect.innerHTML = "";
+            // Clear existing options
+            if (isbnCategorySelect) {
+                isbnCategorySelect.innerHTML = "";
+            }
+            if (detailsCategorySelect) {
+                detailsCategorySelect.innerHTML = "";
+            }
 
-            window.categories.filter(cat => cat !== "all").forEach(cat => {
+            // Add uncategorized option first
+            const uncategorizedOption1 = document.createElement("option");
+            uncategorizedOption1.value = "uncategorized";
+            uncategorizedOption1.textContent = "Uncategorized";
+            if (isbnCategorySelect) isbnCategorySelect.appendChild(uncategorizedOption1);
+
+            const uncategorizedOption2 = document.createElement("option");
+            uncategorizedOption2.value = "uncategorized";
+            uncategorizedOption2.textContent = "Uncategorized";
+            if (detailsCategorySelect) detailsCategorySelect.appendChild(uncategorizedOption2);
+
+            // Add all other categories
+            window.categories.filter(cat => cat !== "all" && cat !== "uncategorized").forEach(cat => {
                 const option1 = document.createElement("option");
                 option1.value = cat;
                 option1.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
-                bookCategorySelect.appendChild(option1);
+                if (isbnCategorySelect) isbnCategorySelect.appendChild(option1);
 
                 const option2 = document.createElement("option");
                 option2.value = cat;
                 option2.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
-                previewCategorySelect.appendChild(option2);
+                if (detailsCategorySelect) detailsCategorySelect.appendChild(option2);
             });
-
-            // Add uncategorized if not present
-            if (!window.categories.includes("uncategorized")) {
-                const uncategorizedOption1 = document.createElement("option");
-                uncategorizedOption1.value = "uncategorized";
-                uncategorizedOption1.textContent = "Uncategorized";
-                bookCategorySelect.prepend(uncategorizedOption1);
-
-                const uncategorizedOption2 = document.createElement("option");
-                uncategorizedOption2.value = "uncategorized";
-                uncategorizedOption2.textContent = "Uncategorized";
-                previewCategorySelect.prepend(uncategorizedOption2);
-            }
         }
 
         // Open add book modal
@@ -1156,7 +1215,7 @@
         async function addBookFromISBN() {
             if (!foundBookData) return;
 
-            const selectedCategory = document.getElementById("previewCategory").value;
+            const selectedCategory = document.getElementById("isbnCategorySelect").value;
 
             try {
                 await window.addBookToFirestore({
@@ -1569,17 +1628,24 @@
             
             // Category filter
             categoriesList.addEventListener("click", (e) => {
-                if (e.target.classList.contains("category-link")) {
+                // Check if clicked element or its parent has category-link class
+                let target = e.target;
+                while (target && !target.classList.contains("category-link")) {
+                    target = target.parentElement;
+                    if (target === categoriesList) break;
+                }
+                
+                if (target && target.classList.contains("category-link")) {
                     e.preventDefault();
-                    const category = e.target.dataset.category;
+                    const category = target.dataset.category;
                     
                     // Update active category
                     document.querySelectorAll(".category-link").forEach(l => {
                         l.classList.remove("bg-indigo-100", "text-indigo-700");
                         l.classList.add("hover:bg-gray-100");
                     });
-                    e.target.classList.add("bg-indigo-100", "text-indigo-700");
-                    e.target.classList.remove("hover:bg-gray-100");
+                    target.classList.add("bg-indigo-100", "text-indigo-700");
+                    target.classList.remove("hover:bg-gray-100");
                     
                     currentCategory = category;
                     renderBooks();
@@ -1634,3 +1700,5 @@
     </script>
 </body>
 </html>
+
+
