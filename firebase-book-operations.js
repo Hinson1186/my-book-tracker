@@ -1,3 +1,5 @@
+const GOOGLE_BOOKS_API_KEY = 'AIzaSyBNiBa24j2t4WmwU4WgNujGCAPiX6VRN_4';
+
 // Firebase 書籍操作模組
 // 此文件包含所有與書籍相關的 Firebase 操作，替換原有的本地儲存邏輯
 
@@ -314,7 +316,13 @@ async function searchBookByISBN(isbn) {
         
         // 首先嘗試 Google Books API
         try {
-            const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanISBN}`);
+            // 構建 API URL，如果有 API 金鑰則使用
+            let apiUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanISBN}`;
+            if (GOOGLE_BOOKS_API_KEY) {
+                apiUrl += `&key=${GOOGLE_BOOKS_API_KEY}`;
+            }
+            
+            const response = await fetch(apiUrl);
             const data = await response.json();
             
             if (data.items && data.items.length > 0) {
