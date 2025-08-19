@@ -107,7 +107,7 @@
         }
         
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
+            0% { opacity: 1; }
             50% { opacity: 0.5; }
         }
         
@@ -380,699 +380,992 @@
             <div class="p-6">
                 <div class="mb-4">
                     <label class="block text-gray-700 mb-2" for="isbnInput">ISBN</label>
-                    <input type="text" id="isbnInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="輸入 ISBN (10 或 13 位數字)">
+                    <input type="text" id="isbnInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="請輸入 ISBN 號碼">
                 </div>
-                <div id="bookPreview" class="hidden mb-4 p-4 border border-gray-200 rounded-lg">
-                    <div class="flex gap-4">
-                        <img id="previewCover" src="" alt="書籍封面" class="w-16 h-24 object-cover rounded">
+                <div id="isbnSearchResults" class="mb-4 hidden">
+                    <h4 class="font-semibold mb-2">搜尋結果:</h4>
+                    <div id="isbnBookDetails" class="bg-gray-50 p-4 rounded-lg flex items-center">
+                        <img id="isbnBookCover" src="" alt="Book Cover" class="w-24 h-32 object-cover rounded-md mr-4">
                         <div>
-                            <h4 id="previewTitle" class="font-semibold"></h4>
-                            <p id="previewAuthor" class="text-gray-600 text-sm"></p>
+                            <p class="font-bold text-lg" id="isbnBookTitle"></p>
+                            <p class="text-gray-600" id="isbnBookAuthor"></p>
+                            <p class="text-gray-500 text-sm" id="isbnBookCategory"></p>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="flex justify-end border-t px-6 py-4 space-x-3">
-                <button id="cancelIsbnBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
+                <button id="cancelIsbnSearchBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">取消</button>
                 <button id="searchIsbnBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center">
                     <span id="searchIsbnText">搜尋</span>
                     <div id="searchIsbnSpinner" class="hidden ml-2 spinner"></div>
                 </button>
-                <button id="addFromIsbnBtn" class="hidden px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">新增書籍</button>
+                <button id="addFoundBookBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hidden">
+                    <i class="fas fa-plus mr-2"></i> 新增此書
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- 書籍詳情模態框 -->
-    <div id="bookDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <!-- 管理分類模態框 -->
+    <div id="manageCategoriesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
             <div class="flex justify-between items-center border-b px-6 py-4">
-                <h3 class="text-xl font-semibold">書籍詳情</h3>
-                <button id="closeDetailsModalBtn" class="text-gray-500 hover:text-gray-700">
+                <h3 class="text-xl font-semibold">管理分類</h3>
+                <button id="closeManageCategoriesModalBtn" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="p-6">
-                <div class="flex flex-col md:flex-row gap-6 mb-6">
-                    <div class="flex-shrink-0">
-                        <img id="detailsBookCover" src="https://via.placeholder.com/150x200" alt="書籍封面" class="w-32 h-48 object-cover rounded-lg shadow-sm">
-                    </div>
-                    <div>
-                        <h2 id="detailsBookTitle" class="text-2xl font-bold mb-1">書名</h2>
-                        <p id="detailsBookAuthor" class="text-gray-600 mb-3">作者</p>
-                        <p id="detailsBookCategory" class="text-sm text-indigo-600 mb-3">分類</p>
-                        <div class="flex space-x-2">
-                            <button id="editBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50">
-                                <i class="fas fa-edit mr-1"></i> 編輯
-                            </button>
-                            <button id="deleteBookBtn" class="px-3 py-1 border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
-                                <i class="fas fa-trash mr-1"></i> 刪除
-                            </button>
-                        </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2" for="newCategoryName">新增分類</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="newCategoryName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="分類名稱">
+                        <button id="addCategoryBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            <i class="fas fa-plus"></i>
+                        </button>
                     </div>
                 </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">現有分類</label>
+                    <ul id="manageCategoriesList" class="border border-gray-300 rounded-lg p-2 max-h-60 overflow-y-auto">
+                        <!-- 分類列表將動態生成 -->
+                    </ul>
+                </div>
+            </div>
+            <div class="flex justify-end border-t px-6 py-4">
+                <button id="saveCategoriesBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">完成</button>
             </div>
         </div>
     </div>
 
-    <!-- 分類管理模態框 -->
-    <div id="manageCategoriesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden">
-            <div class="flex justify-between items-center border-b px-6 py-4">
-                <h3 class="text-xl font-semibold">管理分類</h3>
-                <button id="closeCategoriesModalBtn" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-6 overflow-y-auto max-h-[60vh]">
-                <div class="mb-6">
-                    <h4 class="font-semibold mb-3">分類結構</h4>
-                    <div id="categoryTreeContainer" class="border border-gray-200 rounded-lg p-4 min-h-[200px]">
-                        <!-- 分類樹將動態生成 -->
-                    </div>
-                </div>
-                
-                <div class="border-t pt-6">
-                    <h4 class="font-semibold mb-3">新增分類</h4>
-                    <form id="addCategoryForm">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 mb-2" for="categoryName">分類名稱</label>
-                                <input type="text" id="categoryName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                            </div>
-                            <div>
-                                <label class="block text-gray-700 mb-2" for="parentCategory">父分類</label>
-                                <select id="parentCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    <option value="">根層級</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mt-4">
-                            <button type="submit" id="addCategoryBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center">
-                                <i class="fas fa-plus mr-2"></i>
-                                <span>新增分類</span>
-                                <div id="addCategorySpinner" class="hidden ml-2 spinner"></div>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Toast 通知 -->
+    <div id="toast" class="toast"></div>
 
-    <!-- 載入 Firebase 模組 -->
-    <script src="firebase-integration.js"></script>
-    <script src="firebase-book-operations.js"></script>
-    <script src="firebase-category-operations.js"></script>
-    <script src="firebase-realtime-sync.js"></script>
+    <!-- 同步通知 -->
+    <div id="syncNotification" class="sync-notification"></div>
 
-    <script>
+    <script type="module">
+        // Firebase Configuration (請替換為您的實際配置)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBhufd0TSjVN-6UZX0mjjNwozPma1KjiLw",
+            authDomain: "booktracker-eeb80.firebaseapp.com",
+            projectId: "booktracker-eeb80",
+            storageBucket: "booktracker-eeb80.firebasestorage.app",
+            messagingSenderId: "1041414142866",
+            appId: "1:1041414142866:web:e1a396ed381137fab55f4b",
+            measurementId: "G-ZRHGTERX9B"
+        };
+
+        // Google Books API Key (如果需要使用 Google Books API 進行 ISBN 搜尋)
+        const GOOGLE_BOOKS_API_KEY = ""; // 請在此處填入您的 Google Books API 金鑰
+
+        // Firebase SDK 導入
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
         // 全域變數
-        let currentView = "grid";
-        let currentSelectedBook = null;
-        let currentCategory = "all";
-        let foundBookData = null;
+        let currentUser = null;
+        let allBooks = [];
+        let allCategories = [];
+        let currentFilterCategory = null;
+        let currentSortOrder = "date-desc";
+        let currentViewMode = "grid"; // "grid" or "list"
+        let isSyncing = false;
+        let offlineOperations = [];
 
-        // DOM 元素
-        const booksContainer = document.getElementById("booksContainer");
+        // UI 元素
         const addBookBtn = document.getElementById("addBookBtn");
         const addByIsbnBtn = document.getElementById("addByIsbnBtn");
-        const addBookModal = document.getElementById("addBookModal");
-        const addByIsbnModal = document.getElementById("addByIsbnModal");
-        const bookDetailsModal = document.getElementById("bookDetailsModal");
-        const manageCategoriesModal = document.getElementById("manageCategoriesModal");
+        const manageCategoriesBtn = document.getElementById("manageCategoriesBtn");
+        const searchInput = document.getElementById("searchInput");
+        const sortSelect = document.getElementById("sortSelect");
+        const booksContainer = document.getElementById("booksContainer");
+        const categoriesList = document.getElementById("categoriesList");
+        const totalBooksSpan = document.getElementById("totalBooks");
+        const totalCategoriesSpan = document.getElementById("totalCategories");
         const loadingIndicator = document.getElementById("loadingIndicator");
         const emptyState = document.getElementById("emptyState");
+        const syncStatusIndicator = document.getElementById("syncStatusIndicator");
+        const syncStatusText = document.getElementById("syncStatusText");
+        const lastSyncTimeSpan = document.getElementById("lastSyncTime");
+        const toastElement = document.getElementById("toast");
+        const syncNotificationElement = document.getElementById("syncNotification");
         const offlineIndicator = document.getElementById("offlineIndicator");
+        const offlineOperationsCountSpan = document.getElementById("offlineOperationsCount");
+        const gridViewBtn = document.getElementById("gridViewBtn");
+        const listViewBtn = document.getElementById("listViewBtn");
 
-        // 初始化應用程式
-        function init() {
-            setupEventListeners();
-            setupSyncStatusListener();
-            
-            // 初始 UI 狀態
-            hideLoading();
+        // 新增書籍模態框元素
+        const addBookModal = document.getElementById("addBookModal");
+        const closeModalBtn = document.getElementById("closeModalBtn");
+        const addBookForm = document.getElementById("addBookForm");
+        const bookTitleInput = document.getElementById("bookTitle");
+        const bookAuthorInput = document.getElementById("bookAuthor");
+        const bookCategorySelect = document.getElementById("bookCategory");
+        const bookCoverInput = document.getElementById("bookCover");
+        const cancelAddBookBtn = document.getElementById("cancelAddBookBtn");
+        const saveBookBtn = document.getElementById("saveBookBtn");
+        const saveBookText = document.getElementById("saveBookText");
+        const saveBookSpinner = document.getElementById("saveBookSpinner");
+
+        // ISBN 搜尋模態框元素
+        const addByIsbnModal = document.getElementById("addByIsbnModal");
+        const closeIsbnModalBtn = document.getElementById("closeIsbnModalBtn");
+        const isbnInput = document.getElementById("isbnInput");
+        const searchIsbnBtn = document.getElementById("searchIsbnBtn");
+        const searchIsbnText = document.getElementById("searchIsbnText");
+        const searchIsbnSpinner = document.getElementById("searchIsbnSpinner");
+        const isbnSearchResults = document.getElementById("isbnSearchResults");
+        const isbnBookCover = document.getElementById("isbnBookCover");
+        const isbnBookTitle = document.getElementById("isbnBookTitle");
+        const isbnBookAuthor = document.getElementById("isbnBookAuthor");
+        const isbnBookCategory = document.getElementById("isbnBookCategory");
+        const addFoundBookBtn = document.getElementById("addFoundBookBtn");
+        const cancelIsbnSearchBtn = document.getElementById("cancelIsbnSearchBtn");
+
+        // 管理分類模態框元素
+        const manageCategoriesModal = document.getElementById("manageCategoriesModal");
+        const closeManageCategoriesModalBtn = document.getElementById("closeManageCategoriesModalBtn");
+        const newCategoryNameInput = document.getElementById("newCategoryName");
+        const addCategoryBtn = document.getElementById("addCategoryBtn");
+        const manageCategoriesList = document.getElementById("manageCategoriesList");
+        const saveCategoriesBtn = document.getElementById("saveCategoriesBtn");
+
+        // ==================== UI 輔助函數 ====================
+
+        function showToast(message, type = "info") {
+            toastElement.textContent = message;
+            toastElement.className = `toast show ${type}`;
+            setTimeout(() => {
+                toastElement.classList.remove("show");
+            }, 3000);
         }
 
-        // 設置事件監聽器
-        function setupEventListeners() {
-            // 書籍相關
-            addBookBtn.addEventListener("click", openAddBookModal);
-            addByIsbnBtn.addEventListener("click", openAddByIsbnModal);
-            document.getElementById("closeModalBtn").addEventListener("click", closeAddBookModal);
-            document.getElementById("closeIsbnModalBtn").addEventListener("click", closeAddByIsbnModal);
-            document.getElementById("closeDetailsModalBtn").addEventListener("click", closeBookDetailsModal);
-            document.getElementById("cancelAddBookBtn").addEventListener("click", closeAddBookModal);
-            document.getElementById("cancelIsbnBtn").addEventListener("click", closeAddByIsbnModal);
-            document.getElementById("saveBookBtn").addEventListener("click", saveBook);
-            document.getElementById("searchIsbnBtn").addEventListener("click", searchByISBN);
-            document.getElementById("addFromIsbnBtn").addEventListener("click", addBookFromISBN);
-            document.getElementById("deleteBookBtn").addEventListener("click", deleteBook);
+        function showSyncNotification(message, type = "info") {
+            syncNotificationElement.textContent = message;
+            syncNotificationElement.className = `sync-notification show ${type}`;
+            setTimeout(() => {
+                syncNotificationElement.classList.remove("show");
+            }, 5000);
+        }
 
-            // 分類管理
-            document.getElementById("manageCategoriesBtn").addEventListener("click", openManageCategoriesModal);
-            document.getElementById("closeCategoriesModalBtn").addEventListener("click", closeManageCategoriesModal);
-            document.getElementById("addCategoryForm").addEventListener("submit", addCategory);
+        function updateSyncStatus(status, text, lastSyncTime = null) {
+            syncStatusIndicator.className = `sync-status-indicator ${status}`;
+            syncStatusText.textContent = text;
+            if (lastSyncTime) {
+                lastSyncTimeSpan.textContent = `最後同步: ${new Date(lastSyncTime).toLocaleTimeString()}`;
+            }
+        }
 
-            // 視圖切換
-            document.getElementById("gridViewBtn").addEventListener("click", () => setView("grid"));
-            document.getElementById("listViewBtn").addEventListener("click", () => setView("list"));
+        function updateOfflineOperationsCount(count) {
+            if (count > 0) {
+                offlineOperationsCountSpan.textContent = count;
+                offlineOperationsCountSpan.classList.remove("hidden");
+            } else {
+                offlineOperationsCountSpan.classList.add("hidden");
+            }
+        }
 
-            // 搜尋和排序
-            document.getElementById("searchInput").addEventListener("input", renderBooks);
-            document.getElementById("sortSelect").addEventListener("change", renderBooks);
+        function toggleOfflineIndicator(show) {
+            if (show) {
+                offlineIndicator.classList.add("show");
+            } else {
+                offlineIndicator.classList.remove("show");
+            }
+        }
 
-            // 手機選單
-            document.getElementById("mobileMenuBtn").addEventListener("click", toggleMobileMenu);
+        function showLoading() {
+            loadingIndicator.classList.remove("hidden");
+            booksContainer.classList.add("hidden");
+            emptyState.classList.add("hidden");
+        }
 
-            // ISBN 輸入 Enter 鍵支援
-            document.getElementById("isbnInput").addEventListener("keypress", (e) => {
-                if (e.key === "Enter") {
-                    searchByISBN();
+        function hideLoading() {
+            loadingIndicator.classList.add("hidden");
+        }
+
+        function showEmptyState() {
+            emptyState.classList.remove("hidden");
+            booksContainer.classList.add("hidden");
+        }
+
+        function hideEmptyState() {
+            emptyState.classList.add("hidden");
+            booksContainer.classList.remove("hidden");
+        }
+
+        // ==================== Firebase 整合邏輯 ====================
+
+        // 添加離線操作
+        function addOfflineOperation(operation) {
+            offlineOperations.push(operation);
+            localStorage.setItem("offlineOperations", JSON.stringify(offlineOperations));
+            updateOfflineOperationsCount(offlineOperations.length);
+            showToast("變更已儲存至離線佇列", "info");
+        }
+
+        // 同步離線操作
+        async function syncOfflineOperations() {
+            if (isSyncing || !currentUser || !navigator.onLine) {
+                return;
+            }
+
+            isSyncing = true;
+            updateSyncStatus("syncing", "同步中...");
+            showSyncNotification("正在同步離線變更...", "info");
+
+            const storedOperations = JSON.parse(localStorage.getItem("offlineOperations") || "[]");
+            offlineOperations = storedOperations;
+            updateOfflineOperationsCount(offlineOperations.length);
+
+            if (offlineOperations.length === 0) {
+                isSyncing = false;
+                updateSyncStatus("connected", "已連線", new Date().getTime());
+                showSyncNotification("所有變更已同步完成！", "success");
+                return;
+            }
+
+            const batch = writeBatch(db);
+            let hasError = false;
+
+            for (const op of offlineOperations) {
+                try {
+                    const docRef = op.collection === "books" ? doc(db, `users/${currentUser.uid}/books`, op.id) : doc(db, `users/${currentUser.uid}/categories`, op.id);
+                    switch (op.type) {
+                        case "add":
+                            // 對於新增操作，如果 ID 已經存在，則更新；否則新增
+                            const existingDoc = await getDoc(docRef);
+                            if (existingDoc.exists()) {
+                                batch.update(docRef, op.data);
+                            } else {
+                                batch.set(docRef, op.data);
+                            }
+                            break;
+                        case "update":
+                            batch.update(docRef, op.data);
+                            break;
+                        case "delete":
+                            batch.delete(docRef);
+                            break;
+                    }
+                } catch (error) {
+                    console.error("處理離線操作失敗:", op, error);
+                    hasError = true;
+                    // 不中斷循環，繼續處理其他操作
                 }
+            }
+
+            try {
+                await batch.commit();
+                offlineOperations = [];
+                localStorage.removeItem("offlineOperations");
+                updateOfflineOperationsCount(0);
+                updateSyncStatus("connected", "已連線", new Date().getTime());
+                showSyncNotification("所有離線變更已成功同步！", "success");
+            } catch (error) {
+                console.error("提交離線操作批次失敗:", error);
+                updateSyncStatus("error", "同步錯誤");
+                showSyncNotification("離線變更同步失敗，請重試。", "error");
+                hasError = true;
+            } finally {
+                isSyncing = false;
+                if (hasError) {
+                    showToast("部分離線變更同步失敗，請檢查控制台。", "error");
+                }
+            }
+        }
+
+        // ==================== 書籍操作 ====================
+
+        async function getBooks() {
+            if (!currentUser) return [];
+            const booksCollectionRef = collection(db, `users/${currentUser.uid}/books`);
+            const q = query(booksCollectionRef, orderBy("createdAt", "desc"));
+            return new Promise((resolve) => {
+                onSnapshot(q, (snapshot) => {
+                    const books = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : new Date(),
+                        updatedAt: doc.data().updatedAt ? doc.data().updatedAt.toDate() : new Date()
+                    }));
+                    allBooks = books;
+                    renderBooks();
+                    updateStats();
+                    updateSyncStatus("connected", "已連線", new Date().getTime());
+                    resolve(books);
+                }, (error) => {
+                    console.error("監聽書籍變化失敗:", error);
+                    updateSyncStatus("error", "同步錯誤");
+                    showSyncNotification("書籍資料同步失敗，請檢查網路或重新整理。", "error");
+                    resolve([]);
+                });
             });
         }
 
-        // 設置同步狀態監聽器
-        function setupSyncStatusListener() {
-            if (window.firebaseRealtimeSync) {
-                window.firebaseRealtimeSync.addSyncStatusListener((status, message) => {
-                    updateSyncStatusDisplay(status, message);
-                    
-                    // 更新離線指示器
-                    if (status === 'disconnected') {
-                        offlineIndicator.classList.add('show');
-                    } else {
-                        offlineIndicator.classList.remove('show');
-                    }
+        async function addBook(bookData) {
+            if (!currentUser) {
+                addOfflineOperation({ type: "add", collection: "books", id: Date.now().toString(), data: { ...bookData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() } });
+                return;
+            }
+            try {
+                const booksCollectionRef = collection(db, `users/${currentUser.uid}/books`);
+                const docRef = await addDoc(booksCollectionRef, { ...bookData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+                showToast("書籍新增成功！", "success");
+            } catch (e) {
+                console.error("新增書籍失敗: ", e);
+                showToast("新增書籍失敗！", "error");
+                addOfflineOperation({ type: "add", collection: "books", id: Date.now().toString(), data: { ...bookData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() } });
+            }
+        }
+
+        async function updateBook(bookId, updateData) {
+            if (!currentUser) {
+                addOfflineOperation({ type: "update", collection: "books", id: bookId, data: { ...updateData, updatedAt: serverTimestamp() } });
+                return;
+            }
+            try {
+                const bookRef = doc(db, `users/${currentUser.uid}/books`, bookId);
+                await updateDoc(bookRef, { ...updateData, updatedAt: serverTimestamp() });
+                showToast("書籍更新成功！", "success");
+            } catch (e) {
+                console.error("更新書籍失敗: ", e);
+                showToast("更新書籍失敗！", "error");
+                addOfflineOperation({ type: "update", collection: "books", id: bookId, data: { ...updateData, updatedAt: serverTimestamp() } });
+            }
+        }
+
+        async function deleteBook(bookId) {
+            if (!currentUser) {
+                addOfflineOperation({ type: "delete", collection: "books", id: bookId });
+                return;
+            }
+            try {
+                await deleteDoc(doc(db, `users/${currentUser.uid}/books`, bookId));
+                showToast("書籍刪除成功！", "success");
+            } catch (e) {
+                console.error("刪除書籍失敗: ", e);
+                showToast("刪除書籍失敗！", "error");
+                addOfflineOperation({ type: "delete", collection: "books", id: bookId });
+            }
+        }
+
+        // ==================== 分類操作 (階層化) ====================
+
+        async function getCategories() {
+            if (!currentUser) return [];
+            const categoriesCollectionRef = collection(db, `users/${currentUser.uid}/categories`);
+            const q = query(categoriesCollectionRef, orderBy("name", "asc"));
+            return new Promise((resolve) => {
+                onSnapshot(q, (snapshot) => {
+                    const categories = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    allCategories = categories;
+                    renderCategoriesSidebar();
+                    populateCategorySelect();
+                    updateStats();
+                    updateSyncStatus("connected", "已連線", new Date().getTime());
+                    resolve(categories);
+                }, (error) => {
+                    console.error("監聽分類變化失敗:", error);
+                    updateSyncStatus("error", "同步錯誤");
+                    showSyncNotification("分類資料同步失敗，請檢查網路或重新整理。", "error");
+                    resolve([]);
                 });
+            });
+        }
+
+        async function addCategory(categoryData) {
+            if (!currentUser) {
+                addOfflineOperation({ type: "add", collection: "categories", id: Date.now().toString(), data: categoryData });
+                return;
+            }
+            try {
+                const categoriesCollectionRef = collection(db, `users/${currentUser.uid}/categories`);
+                await addDoc(categoriesCollectionRef, categoryData);
+                showToast("分類新增成功！", "success");
+            } catch (e) {
+                console.error("新增分類失敗: ", e);
+                showToast("新增分類失敗！", "error");
+                addOfflineOperation({ type: "add", collection: "categories", id: Date.now().toString(), data: categoryData });
             }
         }
 
-        // 更新同步狀態顯示
-        function updateSyncStatusDisplay(status, message) {
-            const syncStatusDisplay = document.getElementById('syncStatusDisplay');
-            const lastUpdateTime = document.getElementById('lastUpdateTime');
-            
-            if (syncStatusDisplay) {
-                switch (status) {
-                    case 'connected':
-                        syncStatusDisplay.textContent = '已連線';
-                        syncStatusDisplay.className = 'text-sm font-medium text-green-600';
-                        break;
-                    case 'disconnected':
-                        syncStatusDisplay.textContent = '離線';
-                        syncStatusDisplay.className = 'text-sm font-medium text-gray-600';
-                        break;
-                    case 'syncing':
-                        syncStatusDisplay.textContent = '同步中';
-                        syncStatusDisplay.className = 'text-sm font-medium text-yellow-600';
-                        break;
-                    case 'error':
-                        syncStatusDisplay.textContent = '錯誤';
-                        syncStatusDisplay.className = 'text-sm font-medium text-red-600';
-                        break;
-                }
+        async function updateCategory(categoryId, updateData) {
+            if (!currentUser) {
+                addOfflineOperation({ type: "update", collection: "categories", id: categoryId, data: updateData });
+                return;
             }
-            
-            if (lastUpdateTime && status === 'connected') {
-                lastUpdateTime.textContent = new Date().toLocaleTimeString();
+            try {
+                const categoryRef = doc(db, `users/${currentUser.uid}/categories`, categoryId);
+                await updateDoc(categoryRef, updateData);
+                showToast("分類更新成功！", "success");
+            } catch (e) {
+                console.error("更新分類失敗: ", e);
+                showToast("更新分類失敗！", "error");
+                addOfflineOperation({ type: "update", collection: "categories", id: categoryId, data: updateData });
             }
         }
 
-        // 渲染書籍
+        async function deleteCategory(categoryId) {
+            if (!currentUser) {
+                addOfflineOperation({ type: "delete", collection: "categories", id: categoryId });
+                return;
+            }
+            try {
+                // 獲取所有子分類ID
+                const allSubCategoryIds = getAllSubCategoryIds(allCategories, categoryId);
+                const allCategoryIdsToDelete = [categoryId, ...allSubCategoryIds];
+
+                // 批量更新相關書籍的分類為 "uncategorized"
+                const batch = writeBatch(db);
+                const booksToUpdate = allBooks.filter(book => allCategoryIdsToDelete.includes(book.category));
+                booksToUpdate.forEach(book => {
+                    const bookRef = doc(db, `users/${currentUser.uid}/books`, book.id);
+                    batch.update(bookRef, { category: "uncategorized" });
+                });
+
+                // 批量刪除分類
+                allCategoryIdsToDelete.forEach(id => {
+                    const categoryRef = doc(db, `users/${currentUser.uid}/categories`, id);
+                    batch.delete(categoryRef);
+                });
+
+                await batch.commit();
+                showToast("分類及其相關書籍已更新！", "success");
+            } catch (e) {
+                console.error("刪除分類失敗: ", e);
+                showToast("刪除分類失敗！", "error");
+                addOfflineOperation({ type: "delete", collection: "categories", id: categoryId });
+            }
+        }
+
+        // ==================== 渲染函數 ====================
+
         function renderBooks() {
             hideLoading();
-            booksContainer.innerHTML = "";
-            
-            const books = window.firebaseBookOperations ? window.firebaseBookOperations.getBooks() : [];
-            
-            if (books.length === 0) {
-                emptyState.classList.remove("hidden");
-                return;
-            } else {
-                emptyState.classList.add("hidden");
-            }
-            
-            const filteredBooks = filterAndSortBooks(books);
-            
-            filteredBooks.forEach(book => {
-                const bookCard = createBookCard(book);
-                booksContainer.appendChild(bookCard);
-            });
-        }
+            const searchTerm = searchInput.value.toLowerCase();
+            let filteredBooks = allBooks;
 
-        // 篩選和排序書籍
-        function filterAndSortBooks(books) {
-            let filteredBooks = [...books];
-            const searchTerm = document.getElementById("searchInput").value.toLowerCase();
-            const sortOption = document.getElementById("sortSelect").value;
-            
-            // 應用分類篩選
-            if (currentCategory !== "all") {
-                const categories = window.firebaseCategoryOperations ? window.firebaseCategoryOperations.getCategories() : [];
-                
-                if (currentCategory === "uncategorized") {
+            if (currentFilterCategory) {
+                const categoryPath = allCategories.find(cat => cat.id === currentFilterCategory)?.path;
+                if (categoryPath) {
+                    const childCategoryIds = getChildCategoryIdsRecursive(allCategories, currentFilterCategory);
                     filteredBooks = filteredBooks.filter(book => 
-                        !book.category || book.category === "uncategorized"
-                    );
-                } else {
-                    // 包含子分類
-                    const subCategoryIds = window.firebaseCategoryOperations ? 
-                        window.firebaseCategoryOperations.getAllSubCategoryIds(currentCategory) : [];
-                    const allCategoryIds = [currentCategory, ...subCategoryIds];
-                    
-                    filteredBooks = filteredBooks.filter(book => 
-                        allCategoryIds.includes(book.category)
+                        book.category === currentFilterCategory || childCategoryIds.includes(book.category)
                     );
                 }
             }
-            
-            // 應用搜尋篩選
+
             if (searchTerm) {
-                filteredBooks = filteredBooks.filter(book => 
-                    book.title.toLowerCase().includes(searchTerm) || 
+                filteredBooks = filteredBooks.filter(book =>
+                    book.title.toLowerCase().includes(searchTerm) ||
                     book.author.toLowerCase().includes(searchTerm) ||
-                    (book.category && getCategoryPath(book.category).toLowerCase().includes(searchTerm))
+                    (book.description && book.description.toLowerCase().includes(searchTerm))
                 );
             }
-            
-            // 應用排序
-            switch(sortOption) {
-                case "title-asc":
-                    filteredBooks.sort((a, b) => a.title.localeCompare(b.title));
-                    break;
-                case "title-desc":
-                    filteredBooks.sort((a, b) => b.title.localeCompare(a.title));
-                    break;
-                case "author-asc":
-                    filteredBooks.sort((a, b) => a.author.localeCompare(b.author));
-                    break;
-                case "author-desc":
-                    filteredBooks.sort((a, b) => b.author.localeCompare(a.author));
-                    break;
-                case "category-asc":
-                    filteredBooks.sort((a, b) => getCategoryPath(a.category).localeCompare(getCategoryPath(b.category)));
-                    break;
-                case "category-desc":
-                    filteredBooks.sort((a, b) => getCategoryPath(b.category).localeCompare(getCategoryPath(a.category)));
-                    break;
-                case "date-desc":
-                    filteredBooks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                    break;
-            }
-            
-            return filteredBooks;
-        }
 
-        // 獲取分類路徑
-        function getCategoryPath(categoryId) {
-            if (!categoryId || categoryId === 'uncategorized') return '未分類';
-            
-            if (window.firebaseCategoryOperations) {
-                return window.firebaseCategoryOperations.getCategoryFullPath(categoryId) || categoryId;
-            }
-            
-            return categoryId;
-        }
+            // 排序
+            filteredBooks.sort((a, b) => {
+                switch (currentSortOrder) {
+                    case "title-asc": return a.title.localeCompare(b.title);
+                    case "title-desc": return b.title.localeCompare(a.title);
+                    case "author-asc": return a.author.localeCompare(b.author);
+                    case "author-desc": return b.author.localeCompare(a.author);
+                    case "category-asc": 
+                        const catA = allCategories.find(cat => cat.id === a.category)?.name || "";
+                        const catB = allCategories.find(cat => cat.id === b.category)?.name || "";
+                        return catA.localeCompare(catB);
+                    case "category-desc":
+                        const catADesc = allCategories.find(cat => cat.id === a.category)?.name || "";
+                        const catBDesc = allCategories.find(cat => cat.id === b.category)?.name || "";
+                        return catBDesc.localeCompare(catADesc);
+                    case "date-desc": return b.createdAt - a.createdAt;
+                    default: return 0;
+                }
+            });
 
-        // 創建書籍卡片
-        function createBookCard(book) {
-            const bookCard = document.createElement("div");
-            bookCard.className = `book-card bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer ${currentView === "grid" ? "" : "flex"}`;
-            bookCard.dataset.id = book.id;
-            
-            const categoryPath = getCategoryPath(book.category);
-            const categoryColor = window.firebaseCategoryOperations ? 
-                window.firebaseCategoryOperations.getCategoryColor({ name: categoryPath }) : '#6b7280';
-            
-            if (currentView === "grid") {
+            booksContainer.innerHTML = "";
+            if (filteredBooks.length === 0) {
+                showEmptyState();
+                return;
+            }
+            hideEmptyState();
+
+            filteredBooks.forEach(book => {
+                const bookCard = document.createElement("div");
+                bookCard.className = `book-card bg-white rounded-lg shadow-md p-4 flex flex-col ${currentViewMode === "list" ? "md:flex-row" : ""}`;
                 bookCard.innerHTML = `
-                    <div class="relative">
-                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" alt="${book.title}" class="w-full h-48 object-cover">
-                        <span class="absolute top-2 right-2 px-2 py-1 text-xs rounded-full text-white" style="background-color: ${categoryColor}">${categoryPath}</span>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="font-semibold text-lg mb-1 truncate">${book.title}</h3>
-                        <p class="text-gray-600 text-sm mb-3 truncate">${book.author}</p>
-                    </div>
-                `;
-            } else {
-                bookCard.innerHTML = `
-                    <div class="flex-shrink-0">
-                        <img src="${book.cover || "https://via.placeholder.com/300x450?text=No+Cover"}" alt="${book.title}" class="w-24 h-36 object-cover">
-                    </div>
-                    <div class="p-4 flex-grow">
-                        <div class="flex justify-between">
-                            <div>
-                                <h3 class="font-semibold text-lg mb-1">${book.title}</h3>
-                                <p class="text-gray-600 text-sm mb-2">${book.author}</p>
-                                <span class="px-2 py-1 text-xs rounded-full text-white" style="background-color: ${categoryColor}">${categoryPath}</span>
-                            </div>
+                    <img src="${book.cover || "https://via.placeholder.com/128x192?text=No+Cover"}" alt="${book.title}" class="w-full h-48 object-cover rounded-md mb-4 ${currentViewMode === "list" ? "md:w-32 md:h-48 md:mr-4 md:mb-0" : ""}">
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">${book.title}</h3>
+                        <p class="text-gray-600 text-sm mb-2">${book.author}</p>
+                        <p class="text-gray-500 text-xs mb-2">分類: ${getCategoryPath(book.category)}</p>
+                        <p class="text-gray-700 text-sm mb-4 line-clamp-3">${book.description || "無描述"}</p>
+                        <div class="flex space-x-2">
+                            <button class="edit-book-btn bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600" data-id="${book.id}">編輯</button>
+                            <button class="delete-book-btn bg-red-500 text-white px-3 py-1 rounded-md text-sm hover:bg-red-600" data-id="${book.id}">刪除</button>
                         </div>
                     </div>
                 `;
-            }
-            
-            // 添加點擊事件
-            bookCard.addEventListener("click", () => {
-                openBookDetails(book.id);
+                booksContainer.appendChild(bookCard);
             });
-            
-            return bookCard;
+
+            document.querySelectorAll(".edit-book-btn").forEach(button => {
+                button.addEventListener("click", (e) => openEditBookModal(e.target.dataset.id));
+            });
+            document.querySelectorAll(".delete-book-btn").forEach(button => {
+                button.addEventListener("click", (e) => {
+                    if (confirm("確定要刪除這本書嗎？")) {
+                        deleteBook(e.target.dataset.id);
+                    }
+                });
+            });
         }
 
-        // 更新統計
+        function renderCategoriesSidebar() {
+            categoriesList.innerHTML = "";
+            const rootCategories = allCategories.filter(cat => !cat.parentId);
+            rootCategories.forEach(category => {
+                categoriesList.appendChild(createCategoryListItem(category));
+            });
+        }
+
+        function createCategoryListItem(category) {
+            const li = document.createElement("li");
+            li.className = "mb-1";
+            const hasChildren = allCategories.some(cat => cat.parentId === category.id);
+
+            li.innerHTML = `
+                <div class="flex items-center group cursor-pointer hover:bg-gray-100 p-2 rounded-md">
+                    ${hasChildren ? `<i class="fas fa-chevron-right text-gray-400 mr-2 category-toggle" data-id="${category.id}"></i>` : `<i class="fas fa-circle text-gray-400 text-xs mr-3"></i>`}
+                    <span class="flex-grow category-filter" data-id="${category.id}">${category.name}</span>
+                </div>
+                <ul class="category-children hidden" data-parent-id="${category.id}"></ul>
+            `;
+
+            const toggleIcon = li.querySelector(".category-toggle");
+            if (toggleIcon) {
+                toggleIcon.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const childrenList = li.querySelector(".category-children");
+                    childrenList.classList.toggle("hidden");
+                    e.target.classList.toggle("fa-chevron-right");
+                    e.target.classList.toggle("fa-chevron-down");
+                });
+            }
+
+            li.querySelector(".category-filter").addEventListener("click", () => {
+                currentFilterCategory = category.id;
+                renderBooks();
+                // TODO: 顯示麵包屑導航
+            });
+
+            // 遞歸渲染子分類
+            const childrenList = li.querySelector(".category-children");
+            const children = allCategories.filter(cat => cat.parentId === category.id);
+            children.forEach(child => {
+                childrenList.appendChild(createCategoryListItem(child));
+            });
+
+            return li;
+        }
+
+        function populateCategorySelect() {
+            bookCategorySelect.innerHTML = 
+                `<option value="uncategorized">未分類</option>` +
+                allCategories.map(cat => `<option value="${cat.id}">${getCategoryPath(cat.id)}</option>`).join("");
+        }
+
         function updateStats() {
-            const books = window.firebaseBookOperations ? window.firebaseBookOperations.getBooks() : [];
-            const categories = window.firebaseCategoryOperations ? window.firebaseCategoryOperations.getCategories() : [];
-            
-            document.getElementById("totalBooks").textContent = books.length;
-            document.getElementById("totalCategories").textContent = categories.length;
+            totalBooksSpan.textContent = allBooks.length;
+            totalCategoriesSpan.textContent = allCategories.length;
         }
 
-        // 模態框操作
+        // ==================== 模態框操作 ====================
+
         function openAddBookModal() {
             addBookModal.classList.remove("hidden");
+            bookTitleInput.value = "";
+            bookAuthorInput.value = "";
+            bookCategorySelect.value = "uncategorized";
+            bookCoverInput.value = "";
+            saveBookBtn.dataset.mode = "add";
+            saveBookText.textContent = "儲存書籍";
+            saveBookSpinner.classList.add("hidden");
         }
 
         function closeAddBookModal() {
             addBookModal.classList.add("hidden");
-            document.getElementById("addBookForm").reset();
+        }
+
+        async function openEditBookModal(bookId) {
+            const book = allBooks.find(b => b.id === bookId);
+            if (!book) return;
+
+            bookTitleInput.value = book.title;
+            bookAuthorInput.value = book.author;
+            bookCategorySelect.value = book.category;
+            bookCoverInput.value = book.cover;
+            saveBookBtn.dataset.mode = "edit";
+            saveBookBtn.dataset.id = bookId;
+            saveBookText.textContent = "更新書籍";
+            saveBookSpinner.classList.add("hidden");
+            addBookModal.classList.remove("hidden");
         }
 
         function openAddByIsbnModal() {
             addByIsbnModal.classList.remove("hidden");
-            document.getElementById("bookPreview").classList.add("hidden");
-            document.getElementById("addFromIsbnBtn").classList.add("hidden");
-            foundBookData = null;
+            isbnInput.value = "";
+            isbnSearchResults.classList.add("hidden");
+            addFoundBookBtn.classList.add("hidden");
+            searchIsbnText.textContent = "搜尋";
+            searchIsbnSpinner.classList.add("hidden");
         }
 
         function closeAddByIsbnModal() {
             addByIsbnModal.classList.add("hidden");
-            document.getElementById("isbnInput").value = "";
-            document.getElementById("bookPreview").classList.add("hidden");
-            document.getElementById("addFromIsbnBtn").classList.add("hidden");
-            foundBookData = null;
-        }
-
-        function openBookDetails(bookId) {
-            const books = window.firebaseBookOperations ? window.firebaseBookOperations.getBooks() : [];
-            const book = books.find(b => b.id === bookId);
-            if (!book) return;
-            
-            currentSelectedBook = book;
-            
-            document.getElementById("detailsBookTitle").textContent = book.title;
-            document.getElementById("detailsBookAuthor").textContent = book.author;
-            document.getElementById("detailsBookCategory").textContent = getCategoryPath(book.category);
-            document.getElementById("detailsBookCover").src = book.cover || "https://via.placeholder.com/300x450?text=No+Cover";
-            
-            bookDetailsModal.classList.remove("hidden");
-        }
-
-        function closeBookDetailsModal() {
-            bookDetailsModal.classList.add("hidden");
-            currentSelectedBook = null;
         }
 
         function openManageCategoriesModal() {
             manageCategoriesModal.classList.remove("hidden");
-            renderCategoryManagement();
+            renderManageCategoriesList();
         }
 
         function closeManageCategoriesModal() {
             manageCategoriesModal.classList.add("hidden");
         }
 
-        // 書籍操作
-        async function saveBook() {
-            const title = document.getElementById("bookTitle").value.trim();
-            const author = document.getElementById("bookAuthor").value.trim();
-            const category = document.getElementById("bookCategory").value;
-            const cover = document.getElementById("bookCover").value.trim();
-            
-            if (!title || !author) {
-                showToast("請填寫所有必填欄位", "error");
-                return;
-            }
+        function renderManageCategoriesList() {
+            manageCategoriesList.innerHTML = "";
+            const rootCategories = allCategories.filter(cat => !cat.parentId);
+            rootCategories.forEach(category => {
+                manageCategoriesList.appendChild(createManageCategoryListItem(category));
+            });
+        }
 
-            const saveBtn = document.getElementById("saveBookBtn");
-            const saveText = document.getElementById("saveBookText");
-            const saveSpinner = document.getElementById("saveBookSpinner");
-            
-            saveText.textContent = "儲存中...";
-            saveSpinner.classList.remove("hidden");
-            saveBtn.disabled = true;
-            
-            try {
-                await window.addBookToFirestore({
-                    title,
-                    author,
-                    category,
-                    cover: cover || null
+        function createManageCategoryListItem(category) {
+            const li = document.createElement("li");
+            li.className = "mb-1";
+            const hasChildren = allCategories.some(cat => cat.parentId === category.id);
+
+            li.innerHTML = `
+                <div class="flex items-center justify-between group p-2 rounded-md hover:bg-gray-50">
+                    <div class="flex items-center flex-grow">
+                        ${hasChildren ? `<i class="fas fa-chevron-right text-gray-400 mr-2 category-toggle" data-id="${category.id}"></i>` : `<i class="fas fa-circle text-gray-400 text-xs mr-3"></i>`}
+                        <span class="flex-grow">${category.name}</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="add-sub-category-btn text-green-600 hover:text-green-800 text-sm" data-id="${category.id}" data-name="${category.name}">
+                            <i class="fas fa-plus"></i> 子分類
+                        </button>
+                        <button class="edit-category-btn text-blue-600 hover:text-blue-800 text-sm" data-id="${category.id}" data-name="${category.name}">
+                            <i class="fas fa-edit"></i> 編輯
+                        </button>
+                        <button class="delete-category-btn text-red-600 hover:text-red-800 text-sm" data-id="${category.id}">
+                            <i class="fas fa-trash"></i> 刪除
+                        </button>
+                    </div>
+                </div>
+                <ul class="category-children hidden" data-parent-id="${category.id}"></ul>
+            `;
+
+            const toggleIcon = li.querySelector(".category-toggle");
+            if (toggleIcon) {
+                toggleIcon.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const childrenList = li.querySelector(".category-children");
+                    childrenList.classList.toggle("hidden");
+                    e.target.classList.toggle("fa-chevron-right");
+                    e.target.classList.toggle("fa-chevron-down");
                 });
-                closeAddBookModal();
-            } catch (error) {
-                console.error('儲存書籍失敗:', error);
-            } finally {
-                saveText.textContent = "儲存書籍";
-                saveSpinner.classList.add("hidden");
-                saveBtn.disabled = false;
-            }
-        }
-
-        async function searchByISBN() {
-            const isbn = document.getElementById("isbnInput").value.trim();
-            if (!isbn) {
-                showToast("請輸入 ISBN", "error");
-                return;
             }
 
-            const searchBtn = document.getElementById("searchIsbnBtn");
-            const searchText = document.getElementById("searchIsbnText");
-            const searchSpinner = document.getElementById("searchIsbnSpinner");
-            
-            searchText.textContent = "搜尋中...";
-            searchSpinner.classList.remove("hidden");
-            searchBtn.disabled = true;
-
-            try {
-                const bookData = await window.searchBookByISBN(isbn);
-                foundBookData = bookData;
-                
-                document.getElementById("previewTitle").textContent = bookData.title;
-                document.getElementById("previewAuthor").textContent = bookData.author;
-                document.getElementById("previewCover").src = bookData.cover || "https://via.placeholder.com/150x200?text=No+Cover";
-                document.getElementById("bookPreview").classList.remove("hidden");
-                document.getElementById("addFromIsbnBtn").classList.remove("hidden");
-                
-                showToast("找到書籍！", "success");
-            } catch (error) {
-                showToast("找不到書籍，請檢查 ISBN", "error");
-            } finally {
-                searchText.textContent = "搜尋";
-                searchSpinner.classList.add("hidden");
-                searchBtn.disabled = false;
-            }
-        }
-
-        async function addBookFromISBN() {
-            if (!foundBookData) return;
-
-            try {
-                await window.addBookToFirestore({
-                    title: foundBookData.title,
-                    author: foundBookData.author,
-                    cover: foundBookData.cover,
-                    category: "uncategorized",
-                    isbn: foundBookData.isbn
-                });
-                closeAddByIsbnModal();
-            } catch (error) {
-                console.error('新增書籍失敗:', error);
-            }
-        }
-
-        async function deleteBook() {
-            if (!currentSelectedBook) return;
-            
-            try {
-                await window.deleteBookFromFirestore(currentSelectedBook.id);
-                closeBookDetailsModal();
-            } catch (error) {
-                console.error('刪除書籍失敗:', error);
-            }
-        }
-
-        // 分類操作
-        async function addCategory(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById("categoryName").value.trim();
-            const parentId = document.getElementById("parentCategory").value || null;
-            
-            if (!name) {
-                showToast("請輸入分類名稱", "error");
-                return;
-            }
-
-            const addBtn = document.getElementById("addCategoryBtn");
-            const addSpinner = document.getElementById("addCategorySpinner");
-            
-            addSpinner.classList.remove("hidden");
-            addBtn.disabled = true;
-            
-            try {
-                if (window.firebaseCategoryOperations) {
-                    await window.firebaseCategoryOperations.addHierarchicalCategory({
-                        name,
-                        parentId,
-                        description: `用戶創建的 ${name} 分類`
-                    });
-                }
-                
-                document.getElementById("addCategoryForm").reset();
-                renderCategoryManagement();
-            } catch (error) {
-                console.error('新增分類失敗:', error);
-            } finally {
-                addSpinner.classList.add("hidden");
-                addBtn.disabled = false;
-            }
-        }
-
-        // 渲染分類管理
-        function renderCategoryManagement() {
-            // 更新父分類選擇器
-            const parentSelect = document.getElementById("parentCategory");
-            const categories = window.firebaseCategoryOperations ? window.firebaseCategoryOperations.getCategories() : [];
-            
-            parentSelect.innerHTML = '<option value="">根層級</option>';
-            
-            categories.forEach(category => {
-                if (category.id !== 'uncategorized') {
-                    const option = document.createElement('option');
-                    option.value = category.id;
-                    option.textContent = category.path || category.name;
-                    parentSelect.appendChild(option);
+            li.querySelector(".add-sub-category-btn").addEventListener("click", (e) => {
+                const parentId = e.target.dataset.id;
+                const parentName = e.target.dataset.name;
+                const subCategoryName = prompt(`請輸入 ${parentName} 的子分類名稱:`);
+                if (subCategoryName) {
+                    const parentCategory = allCategories.find(cat => cat.id === parentId);
+                    const newLevel = parentCategory ? parentCategory.level + 1 : 1;
+                    const newPath = parentCategory ? `${parentCategory.path}/${subCategoryName}` : `/${subCategoryName}`;
+                    addCategory({ name: subCategoryName, parentId: parentId, level: newLevel, path: newPath });
                 }
             });
-            
-            // 渲染分類樹
-            const treeContainer = document.getElementById("categoryTreeContainer");
-            if (window.firebaseCategoryOperations) {
-                const categoryTree = window.firebaseCategoryOperations.buildCategoryTree();
-                treeContainer.innerHTML = renderCategoryTree(categoryTree);
-            }
-        }
 
-        function renderCategoryTree(categories) {
-            if (!categories || categories.length === 0) {
-                return '<p class="text-gray-500 text-center py-4">尚無分類</p>';
-            }
-            
-            return categories.map(category => `
-                <div class="category-item mb-2">
-                    <div class="flex items-center justify-between p-2 border border-gray-200 rounded">
-                        <div class="flex items-center">
-                            <i class="fas ${window.firebaseCategoryOperations.getCategoryIcon(category)} mr-2" 
-                               style="color: ${window.firebaseCategoryOperations.getCategoryColor(category)}"></i>
-                            <span class="font-medium">${category.name}</span>
-                            <span class="ml-2 text-xs text-gray-500">(${category.path})</span>
-                        </div>
-                        <div class="flex space-x-1">
-                            <button class="text-red-600 hover:text-red-800 text-sm p-1" 
-                                    onclick="deleteCategory('${category.id}')" 
-                                    title="刪除分類">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    ${category.children && category.children.length > 0 ? 
-                        `<div class="ml-4 mt-2">${renderCategoryTree(category.children)}</div>` : ''}
-                </div>
-            `).join('');
-        }
-
-        async function deleteCategory(categoryId) {
-            if (window.firebaseCategoryOperations) {
-                try {
-                    await window.firebaseCategoryOperations.deleteHierarchicalCategory(categoryId);
-                    renderCategoryManagement();
-                } catch (error) {
-                    console.error('刪除分類失敗:', error);
+            li.querySelector(".edit-category-btn").addEventListener("click", (e) => {
+                const categoryId = e.target.dataset.id;
+                const oldName = e.target.dataset.name;
+                const newName = prompt(`編輯分類名稱:`, oldName);
+                if (newName && newName !== oldName) {
+                    updateCategory(categoryId, { name: newName });
                 }
-            }
+            });
+
+            li.querySelector(".delete-category-btn").addEventListener("click", (e) => {
+                const categoryId = e.target.dataset.id;
+                if (confirm("確定要刪除此分類及其所有子分類和相關書籍嗎？相關書籍將被設為未分類。")) {
+                    deleteCategory(categoryId);
+                }
+            });
+
+            // 遞歸渲染子分類
+            const childrenList = li.querySelector(".category-children");
+            const children = allCategories.filter(cat => cat.parentId === category.id);
+            children.forEach(child => {
+                childrenList.appendChild(createManageCategoryListItem(child));
+            });
+
+            return li;
         }
 
-        // 視圖切換
-        function setView(view) {
-            if (currentView !== view) {
-                currentView = view;
-                
-                const gridBtn = document.getElementById("gridViewBtn");
-                const listBtn = document.getElementById("listViewBtn");
-                
-                if (view === "grid") {
-                    gridBtn.classList.add("bg-indigo-100", "text-indigo-600");
-                    gridBtn.classList.remove("hover:bg-gray-100");
-                    listBtn.classList.remove("bg-indigo-100", "text-indigo-600");
-                    listBtn.classList.add("hover:bg-gray-100");
+        // ==================== 工具函數 ====================
+
+        function getCategoryPath(categoryId) {
+            if (categoryId === "uncategorized") return "未分類";
+            const category = allCategories.find(cat => cat.id === categoryId);
+            if (!category) return "未知分類";
+
+            let path = category.name;
+            let current = category;
+            while (current.parentId) {
+                const parent = allCategories.find(cat => cat.id === current.parentId);
+                if (parent) {
+                    path = `${parent.name} / ${path}`;
+                    current = parent;
                 } else {
-                    listBtn.classList.add("bg-indigo-100", "text-indigo-600");
-                    listBtn.classList.remove("hover:bg-gray-100");
-                    gridBtn.classList.remove("bg-indigo-100", "text-indigo-600");
-                    gridBtn.classList.add("hover:bg-gray-100");
+                    break;
                 }
-                
+            }
+            return path;
+        }
+
+        function getAllSubCategoryIds(categories, parentId) {
+            const subCategoryIds = [];
+            categories.forEach(category => {
+                if (category.parentId === parentId) {
+                    subCategoryIds.push(category.id);
+                    subCategoryIds.push(...getAllSubCategoryIds(categories, category.id));
+                }
+            });
+            return subCategoryIds;
+        }
+
+        function getChildCategoryIdsRecursive(categories, parentId) {
+            const children = categories.filter(cat => cat.parentId === parentId);
+            let ids = children.map(c => c.id);
+            children.forEach(c => {
+                ids = ids.concat(getChildCategoryIdsRecursive(categories, c.id));
+            });
+            return ids;
+        }
+
+        async function searchBookByIsbn(isbn) {
+            // 優先使用 Google Books API
+            if (GOOGLE_BOOKS_API_KEY) {
+                try {
+                    const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${GOOGLE_BOOKS_API_KEY}`);
+                    const data = await response.json();
+                    if (data.items && data.items.length > 0) {
+                        const item = data.items[0].volumeInfo;
+                        return {
+                            title: item.title,
+                            author: item.authors ? item.authors.join(", ") : "未知作者",
+                            cover: item.imageLinks ? item.imageLinks.thumbnail : "",
+                            description: item.description || ""
+                        };
+                    }
+                } catch (error) {
+                    console.error("Google Books API 搜尋失敗:", error);
+                }
+            }
+
+            // 備用 Open Library API
+            try {
+                const response = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
+                const data = await response.json();
+                if (data) {
+                    const title = data.title || "";
+                    const authors = data.authors ? await Promise.all(data.authors.map(async (author) => {
+                        const authorRes = await fetch(`https://openlibrary.org${author.key}.json`);
+                        const authorData = await authorRes.json();
+                        return authorData.name;
+                    })) : [];
+                    const cover = data.covers ? `https://covers.openlibrary.org/b/id/${data.covers[0]}-L.jpg` : "";
+                    const description = typeof data.description === "string" ? data.description : data.description?.value || "";
+
+                    return {
+                        title: title,
+                        author: authors.join(", "),
+                        cover: cover,
+                        description: description
+                    };
+                }
+            } catch (error) {
+                console.error("Open Library API 搜尋失敗:", error);
+            }
+
+            return null;
+        }
+
+        // ==================== 事件監聽器 ====================
+
+        // 頁面載入完成後初始化
+        document.addEventListener("DOMContentLoaded", () => {
+            // 匿名登入 Firebase
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    console.log("Firebase 匿名登入成功，用戶 ID:", currentUser.uid);
+                    updateSyncStatus("connected", "已連線");
+                    syncOfflineOperations(); // 登入後嘗試同步離線操作
+                    getBooks(); // 開始監聽書籍變化
+                    getCategories(); // 開始監聽分類變化
+                } else {
+                    console.log("Firebase 用戶已登出");
+                    updateSyncStatus("disconnected", "已登出");
+                    // 嘗試匿名登入
+                    signInAnonymously(auth).catch(error => {
+                        console.error("匿名登入失敗:", error);
+                        updateSyncStatus("error", "連線失敗");
+                        showToast("Firebase 連線失敗，請檢查配置和網路。", "error");
+                    });
+                }
+            });
+
+            // 監聽網路連線狀態
+            window.addEventListener("online", () => {
+                toggleOfflineIndicator(false);
+                showSyncNotification("網路已連線，嘗試同步資料...", "info");
+                syncOfflineOperations();
+            });
+
+            window.addEventListener("offline", () => {
+                toggleOfflineIndicator(true);
+                showSyncNotification("網路已離線，變更將在重新連線後同步。", "error");
+            });
+
+            // 初始檢查網路狀態
+            if (!navigator.onLine) {
+                toggleOfflineIndicator(true);
+                showSyncNotification("網路已離線，變更將在重新連線後同步。", "error");
+            }
+
+            // 綁定事件
+            addBookBtn.addEventListener("click", openAddBookModal);
+            closeModalBtn.addEventListener("click", closeAddBookModal);
+            cancelAddBookBtn.addEventListener("click", closeAddBookModal);
+
+            addBookForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                saveBookSpinner.classList.remove("hidden");
+                saveBookText.textContent = "儲存中...";
+
+                const bookData = {
+                    title: bookTitleInput.value,
+                    author: bookAuthorInput.value,
+                    category: bookCategorySelect.value,
+                    cover: bookCoverInput.value,
+                    description: ""
+                };
+
+                if (saveBookBtn.dataset.mode === "add") {
+                    await addBook(bookData);
+                } else {
+                    await updateBook(saveBookBtn.dataset.id, bookData);
+                }
+                saveBookSpinner.classList.add("hidden");
+                saveBookText.textContent = "儲存書籍";
+                closeAddBookModal();
+            });
+
+            addByIsbnBtn.addEventListener("click", openAddByIsbnModal);
+            closeIsbnModalBtn.addEventListener("click", closeAddByIsbnModal);
+            cancelIsbnSearchBtn.addEventListener("click", closeAddByIsbnModal);
+
+            searchIsbnBtn.addEventListener("click", async () => {
+                const isbn = isbnInput.value.trim();
+                if (!isbn) {
+                    showToast("請輸入 ISBN 號碼！", "error");
+                    return;
+                }
+
+                searchIsbnSpinner.classList.remove("hidden");
+                searchIsbnText.textContent = "搜尋中...";
+                isbnSearchResults.classList.add("hidden");
+                addFoundBookBtn.classList.add("hidden");
+
+                const book = await searchBookByIsbn(isbn);
+
+                searchIsbnSpinner.classList.add("hidden");
+                searchIsbnText.textContent = "搜尋";
+
+                if (book) {
+                    isbnBookCover.src = book.cover || "https://via.placeholder.com/128x192?text=No+Cover";
+                    isbnBookTitle.textContent = book.title;
+                    isbnBookAuthor.textContent = book.author;
+                    isbnBookCategory.textContent = ""; // 分類在新增時選擇
+                    isbnSearchResults.classList.remove("hidden");
+                    addFoundBookBtn.classList.remove("hidden");
+                    addFoundBookBtn.dataset.book = JSON.stringify(book);
+                } else {
+                    showToast("未找到該 ISBN 的書籍資訊。", "error");
+                }
+            });
+
+            addFoundBookBtn.addEventListener("click", async (e) => {
+                const bookData = JSON.parse(e.target.dataset.book);
+                // 在這裡可以彈出新增書籍模態框，讓用戶選擇分類並確認
+                // 為了簡化，這裡直接新增並設為未分類
+                await addBook({ ...bookData, category: "uncategorized" });
+                closeAddByIsbnModal();
+            });
+
+            manageCategoriesBtn.addEventListener("click", openManageCategoriesModal);
+            closeManageCategoriesModalBtn.addEventListener("click", closeManageCategoriesModal);
+            saveCategoriesBtn.addEventListener("click", closeManageCategoriesModal);
+
+            addCategoryBtn.addEventListener("click", () => {
+                const categoryName = newCategoryNameInput.value.trim();
+                if (categoryName) {
+                    addCategory({ name: categoryName, parentId: null, level: 0, path: `/${categoryName}` });
+                    newCategoryNameInput.value = "";
+                } else {
+                    showToast("分類名稱不能為空！", "error");
+                }
+            });
+
+            searchInput.addEventListener("input", renderBooks);
+            sortSelect.addEventListener("change", (e) => {
+                currentSortOrder = e.target.value;
                 renderBooks();
-            }
-        }
+            });
 
-        // 設置當前分類
-        function setCurrentCategory(categoryId) {
-            currentCategory = categoryId;
-            renderBooks();
-        }
+            gridViewBtn.addEventListener("click", () => {
+                currentViewMode = "grid";
+                gridViewBtn.classList.add("bg-indigo-100", "text-indigo-600");
+                listViewBtn.classList.remove("bg-indigo-100", "text-indigo-600");
+                renderBooks();
+            });
 
-        // 切換手機選單
-        function toggleMobileMenu() {
-            const sidebar = document.querySelector("aside");
-            sidebar.classList.toggle("hidden");
-        }
-
-        // 隱藏載入指示器
-        function hideLoading() {
-            loadingIndicator.classList.add("hidden");
-        }
-
-        // 顯示 Toast 通知
-        function showToast(message, type = 'success') {
-            if (window.firebaseBookOperations) {
-                window.firebaseBookOperations.showToast(message, type);
-            }
-        }
-
-        // 全域函式
-        window.openAddBookModal = openAddBookModal;
-        window.renderBooks = renderBooks;
-        window.updateStats = updateStats;
-        window.setCurrentCategory = setCurrentCategory;
-        window.deleteCategory = deleteCategory;
-
-        // 初始化應用程式
-        document.addEventListener("DOMContentLoaded", init);
-
-        // 定期更新統計和 UI
-        setInterval(() => {
-            updateStats();
-            if (window.firebaseCategoryOperations) {
-                window.firebaseCategoryOperations.updateCategoryBookCounts();
-                window.firebaseCategoryOperations.updateCategorySelectors();
-            }
-        }, 5000);
+            listViewBtn.addEventListener("click", () => {
+                currentViewMode = "list";
+                listViewBtn.classList.add("bg-indigo-100", "text-indigo-600");
+                gridViewBtn.classList.remove("bg-indigo-100", "text-indigo-600");
+                renderBooks();
+            });
+        });
     </script>
 </body>
 </html>
+
 
