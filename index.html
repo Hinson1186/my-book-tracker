@@ -79,69 +79,6 @@
             background-color: #ef4444;
         }
         
-        /* 同步狀態指示器 */
-        .sync-status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        
-        .sync-status-indicator.connected {
-            background-color: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
-        }
-        
-        .sync-status-indicator.disconnected {
-            background-color: #6b7280;
-        }
-        
-        .sync-status-indicator.syncing {
-            background-color: #f59e0b;
-            animation: pulse 1s infinite;
-        }
-        
-        .sync-status-indicator.error {
-            background-color: #ef4444;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        /* 同步通知 */
-        .sync-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 1000;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-            max-width: 300px;
-        }
-        
-        .sync-notification.show {
-            transform: translateY(0);
-        }
-        
-        .sync-notification.success {
-            background-color: #10b981;
-        }
-        
-        .sync-notification.error {
-            background-color: #ef4444;
-        }
-        
-        .sync-notification.info {
-            background-color: #3b82f6;
-        }
-        
         /* 分類樹狀結構 */
         .category-children {
             margin-left: 16px;
@@ -185,18 +122,17 @@
         <!-- 標題列 -->
         <header class="bg-indigo-600 text-white shadow-md">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-book-open text-2xl"></i>
-                    <h1 class="text-2xl font-bold">MyBookTracker</h1>
-                    <div class="ml-4 flex items-center text-sm">
-                        <div id="syncStatusIndicator" class="sync-status-indicator disconnected"></div>
-                        <span id="syncStatusText">初始化中...</span>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-book-open text-2xl"></i>
+                        <h1 class="text-2xl font-bold">MyBookTracker</h1>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-indigo-500 px-3 py-1 rounded-full">
+                        <i class="fas fa-book text-sm"></i>
+                        <span class="text-sm font-medium">總書籍數: <span id="totalBooks">0</span></span>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <div class="hidden md:block text-xs">
-                        <div id="lastSyncTime">尚未同步</div>
-                    </div>
                     <button id="mobileMenuBtn" class="md:hidden text-white p-2">
                         <i class="fas fa-bars"></i>
                     </button>
@@ -227,46 +163,6 @@
 
             <!-- 主要內容 -->
             <main class="flex-grow container mx-auto px-4 py-6">
-                <!-- 統計概覽 -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-white p-4 rounded-lg shadow-sm flex items-center">
-                        <div class="bg-indigo-100 p-3 rounded-full mr-4">
-                            <i class="fas fa-book text-indigo-600 text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-gray-500 text-sm">總書籍數</p>
-                            <p class="text-2xl font-bold" id="totalBooks">0</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow-sm flex items-center">
-                        <div class="bg-green-100 p-3 rounded-full mr-4">
-                            <i class="fas fa-folder text-green-600 text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-gray-500 text-sm">分類數</p>
-                            <p class="text-2xl font-bold" id="totalCategories">0</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow-sm flex items-center">
-                        <div class="bg-blue-100 p-3 rounded-full mr-4">
-                            <i class="fas fa-cloud text-blue-600 text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-gray-500 text-sm">同步狀態</p>
-                            <p class="text-sm font-medium" id="syncStatusDisplay">檢查中...</p>
-                        </div>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow-sm flex items-center">
-                        <div class="bg-purple-100 p-3 rounded-full mr-4">
-                            <i class="fas fa-clock text-purple-600 text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-gray-500 text-sm">最後更新</p>
-                            <p class="text-sm font-medium" id="lastUpdateTime">-</p>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 搜尋和排序 -->
                 <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
                     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -442,9 +338,6 @@
     <!-- Toast 通知 -->
     <div id="toast" class="toast"></div>
 
-    <!-- 同步通知 -->
-    <div id="syncNotification" class="sync-notification"></div>
-
     <script type="module">
         // Firebase Configuration (請替換為您的實際配置)
         const firebaseConfig = {
@@ -462,16 +355,13 @@
 
         // Firebase SDK 導入
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch, serverTimestamp, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // 初始化 Firebase
+        // 初始化 Firebase (不使用 Authentication)
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
 
         // 全域變數
-        let currentUser = null;
         let allBooks = [];
         let allCategories = [];
         let currentFilterCategory = null;
@@ -479,6 +369,9 @@
         let currentViewMode = "grid"; // "grid" or "list"
         let isSyncing = false;
         let offlineOperations = [];
+
+        // 使用固定的用戶ID (不需要 Authentication)
+        const FIXED_USER_ID = "default_user";
 
         // UI 元素
         const addBookBtn = document.getElementById("addBookBtn");
@@ -489,14 +382,9 @@
         const booksContainer = document.getElementById("booksContainer");
         const categoriesList = document.getElementById("categoriesList");
         const totalBooksSpan = document.getElementById("totalBooks");
-        const totalCategoriesSpan = document.getElementById("totalCategories");
         const loadingIndicator = document.getElementById("loadingIndicator");
         const emptyState = document.getElementById("emptyState");
-        const syncStatusIndicator = document.getElementById("syncStatusIndicator");
-        const syncStatusText = document.getElementById("syncStatusText");
-        const lastSyncTimeSpan = document.getElementById("lastSyncTime");
         const toastElement = document.getElementById("toast");
-        const syncNotificationElement = document.getElementById("syncNotification");
         const offlineIndicator = document.getElementById("offlineIndicator");
         const offlineOperationsCountSpan = document.getElementById("offlineOperationsCount");
         const gridViewBtn = document.getElementById("gridViewBtn");
@@ -548,22 +436,6 @@
             }, 3000);
         }
 
-        function showSyncNotification(message, type = "info") {
-            syncNotificationElement.textContent = message;
-            syncNotificationElement.className = `sync-notification show ${type}`;
-            setTimeout(() => {
-                syncNotificationElement.classList.remove("show");
-            }, 5000);
-        }
-
-        function updateSyncStatus(status, text, lastSyncTime = null) {
-            syncStatusIndicator.className = `sync-status-indicator ${status}`;
-            syncStatusText.textContent = text;
-            if (lastSyncTime) {
-                lastSyncTimeSpan.textContent = `最後同步: ${new Date(lastSyncTime).toLocaleTimeString()}`;
-            }
-        }
-
         function updateOfflineOperationsCount(count) {
             if (count > 0) {
                 offlineOperationsCountSpan.textContent = count;
@@ -613,13 +485,11 @@
 
         // 同步離線操作
         async function syncOfflineOperations() {
-            if (isSyncing || !currentUser || !navigator.onLine) {
+            if (isSyncing || !navigator.onLine) {
                 return;
             }
 
             isSyncing = true;
-            updateSyncStatus("syncing", "同步中...");
-            showSyncNotification("正在同步離線變更...", "info");
 
             const storedOperations = JSON.parse(localStorage.getItem("offlineOperations") || "[]");
             offlineOperations = storedOperations;
@@ -627,8 +497,6 @@
 
             if (offlineOperations.length === 0) {
                 isSyncing = false;
-                updateSyncStatus("connected", "已連線", new Date().getTime());
-                showSyncNotification("所有變更已同步完成！", "success");
                 return;
             }
 
@@ -637,10 +505,9 @@
 
             for (const op of offlineOperations) {
                 try {
-                    const docRef = op.collection === "books" ? doc(db, `users/${currentUser.uid}/books`, op.id) : doc(db, `users/${currentUser.uid}/categories`, op.id);
+                    const docRef = op.collection === "books" ? doc(db, `users/${FIXED_USER_ID}/books`, op.id) : doc(db, `users/${FIXED_USER_ID}/categories`, op.id);
                     switch (op.type) {
                         case "add":
-                            // 對於新增操作，如果 ID 已經存在，則更新；否則新增
                             const existingDoc = await getDoc(docRef);
                             if (existingDoc.exists()) {
                                 batch.update(docRef, op.data);
@@ -658,7 +525,6 @@
                 } catch (error) {
                     console.error("處理離線操作失敗:", op, error);
                     hasError = true;
-                    // 不中斷循環，繼續處理其他操作
                 }
             }
 
@@ -667,12 +533,10 @@
                 offlineOperations = [];
                 localStorage.removeItem("offlineOperations");
                 updateOfflineOperationsCount(0);
-                updateSyncStatus("connected", "已連線", new Date().getTime());
-                showSyncNotification("所有離線變更已成功同步！", "success");
+                showToast("所有離線變更已成功同步！", "success");
             } catch (error) {
                 console.error("提交離線操作批次失敗:", error);
-                updateSyncStatus("error", "同步錯誤");
-                showSyncNotification("離線變更同步失敗，請重試。", "error");
+                showToast("離線變更同步失敗，請重試。", "error");
                 hasError = true;
             } finally {
                 isSyncing = false;
@@ -685,8 +549,7 @@
         // ==================== 書籍操作 ====================
 
         async function getBooks() {
-            if (!currentUser) return [];
-            const booksCollectionRef = collection(db, `users/${currentUser.uid}/books`);
+            const booksCollectionRef = collection(db, `users/${FIXED_USER_ID}/books`);
             const q = query(booksCollectionRef, orderBy("createdAt", "desc"));
             return new Promise((resolve) => {
                 onSnapshot(q, (snapshot) => {
@@ -699,24 +562,18 @@
                     allBooks = books;
                     renderBooks();
                     updateStats();
-                    updateSyncStatus("connected", "已連線", new Date().getTime());
                     resolve(books);
                 }, (error) => {
                     console.error("監聽書籍變化失敗:", error);
-                    updateSyncStatus("error", "同步錯誤");
-                    showSyncNotification("書籍資料同步失敗，請檢查網路或重新整理。", "error");
+                    showToast("書籍資料同步失敗，請檢查網路或重新整理。", "error");
                     resolve([]);
                 });
             });
         }
 
         async function addBook(bookData) {
-            if (!currentUser) {
-                addOfflineOperation({ type: "add", collection: "books", id: Date.now().toString(), data: { ...bookData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() } });
-                return;
-            }
             try {
-                const booksCollectionRef = collection(db, `users/${currentUser.uid}/books`);
+                const booksCollectionRef = collection(db, `users/${FIXED_USER_ID}/books`);
                 const docRef = await addDoc(booksCollectionRef, { ...bookData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
                 showToast("書籍新增成功！", "success");
             } catch (e) {
@@ -727,12 +584,8 @@
         }
 
         async function updateBook(bookId, updateData) {
-            if (!currentUser) {
-                addOfflineOperation({ type: "update", collection: "books", id: bookId, data: { ...updateData, updatedAt: serverTimestamp() } });
-                return;
-            }
             try {
-                const bookRef = doc(db, `users/${currentUser.uid}/books`, bookId);
+                const bookRef = doc(db, `users/${FIXED_USER_ID}/books`, bookId);
                 await updateDoc(bookRef, { ...updateData, updatedAt: serverTimestamp() });
                 showToast("書籍更新成功！", "success");
             } catch (e) {
@@ -743,12 +596,8 @@
         }
 
         async function deleteBook(bookId) {
-            if (!currentUser) {
-                addOfflineOperation({ type: "delete", collection: "books", id: bookId });
-                return;
-            }
             try {
-                await deleteDoc(doc(db, `users/${currentUser.uid}/books`, bookId));
+                await deleteDoc(doc(db, `users/${FIXED_USER_ID}/books`, bookId));
                 showToast("書籍刪除成功！", "success");
             } catch (e) {
                 console.error("刪除書籍失敗: ", e);
@@ -760,8 +609,7 @@
         // ==================== 分類操作 (階層化) ====================
 
         async function getCategories() {
-            if (!currentUser) return [];
-            const categoriesCollectionRef = collection(db, `users/${currentUser.uid}/categories`);
+            const categoriesCollectionRef = collection(db, `users/${FIXED_USER_ID}/categories`);
             const q = query(categoriesCollectionRef, orderBy("name", "asc"));
             return new Promise((resolve) => {
                 onSnapshot(q, (snapshot) => {
@@ -773,24 +621,18 @@
                     renderCategoriesSidebar();
                     populateCategorySelect();
                     updateStats();
-                    updateSyncStatus("connected", "已連線", new Date().getTime());
                     resolve(categories);
                 }, (error) => {
                     console.error("監聽分類變化失敗:", error);
-                    updateSyncStatus("error", "同步錯誤");
-                    showSyncNotification("分類資料同步失敗，請檢查網路或重新整理。", "error");
+                    showToast("分類資料同步失敗，請檢查網路或重新整理。", "error");
                     resolve([]);
                 });
             });
         }
 
         async function addCategory(categoryData) {
-            if (!currentUser) {
-                addOfflineOperation({ type: "add", collection: "categories", id: Date.now().toString(), data: categoryData });
-                return;
-            }
             try {
-                const categoriesCollectionRef = collection(db, `users/${currentUser.uid}/categories`);
+                const categoriesCollectionRef = collection(db, `users/${FIXED_USER_ID}/categories`);
                 await addDoc(categoriesCollectionRef, categoryData);
                 showToast("分類新增成功！", "success");
             } catch (e) {
@@ -801,12 +643,8 @@
         }
 
         async function updateCategory(categoryId, updateData) {
-            if (!currentUser) {
-                addOfflineOperation({ type: "update", collection: "categories", id: categoryId, data: updateData });
-                return;
-            }
             try {
-                const categoryRef = doc(db, `users/${currentUser.uid}/categories`, categoryId);
+                const categoryRef = doc(db, `users/${FIXED_USER_ID}/categories`, categoryId);
                 await updateDoc(categoryRef, updateData);
                 showToast("分類更新成功！", "success");
             } catch (e) {
@@ -817,10 +655,6 @@
         }
 
         async function deleteCategory(categoryId) {
-            if (!currentUser) {
-                addOfflineOperation({ type: "delete", collection: "categories", id: categoryId });
-                return;
-            }
             try {
                 // 獲取所有子分類ID
                 const allSubCategoryIds = getAllSubCategoryIds(allCategories, categoryId);
@@ -830,13 +664,13 @@
                 const batch = writeBatch(db);
                 const booksToUpdate = allBooks.filter(book => allCategoryIdsToDelete.includes(book.category));
                 booksToUpdate.forEach(book => {
-                    const bookRef = doc(db, `users/${currentUser.uid}/books`, book.id);
+                    const bookRef = doc(db, `users/${FIXED_USER_ID}/books`, book.id);
                     batch.update(bookRef, { category: "uncategorized" });
                 });
 
                 // 批量刪除分類
                 allCategoryIdsToDelete.forEach(id => {
-                    const categoryRef = doc(db, `users/${currentUser.uid}/categories`, id);
+                    const categoryRef = doc(db, `users/${FIXED_USER_ID}/categories`, id);
                     batch.delete(categoryRef);
                 });
 
@@ -967,7 +801,6 @@
             li.querySelector(".category-filter").addEventListener("click", () => {
                 currentFilterCategory = category.id;
                 renderBooks();
-                // TODO: 顯示麵包屑導航
             });
 
             // 遞歸渲染子分類
@@ -988,7 +821,6 @@
 
         function updateStats() {
             totalBooksSpan.textContent = allBooks.length;
-            totalCategoriesSpan.textContent = allCategories.length;
         }
 
         // ==================== 模態框操作 ====================
@@ -1221,43 +1053,28 @@
 
         // 頁面載入完成後初始化
         document.addEventListener("DOMContentLoaded", () => {
-            // 匿名登入 Firebase
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    console.log("Firebase 匿名登入成功，用戶 ID:", currentUser.uid);
-                    updateSyncStatus("connected", "已連線");
-                    syncOfflineOperations(); // 登入後嘗試同步離線操作
-                    getBooks(); // 開始監聽書籍變化
-                    getCategories(); // 開始監聽分類變化
-                } else {
-                    console.log("Firebase 用戶已登出");
-                    updateSyncStatus("disconnected", "已登出");
-                    // 嘗試匿名登入
-                    signInAnonymously(auth).catch(error => {
-                        console.error("匿名登入失敗:", error);
-                        updateSyncStatus("error", "連線失敗");
-                        showToast("Firebase 連線失敗，請檢查配置和網路。", "error");
-                    });
-                }
-            });
+            console.log("開始初始化應用程式...");
+            
+            // 直接開始載入資料，不需要 Authentication
+            getBooks(); // 開始監聽書籍變化
+            getCategories(); // 開始監聽分類變化
 
             // 監聽網路連線狀態
             window.addEventListener("online", () => {
                 toggleOfflineIndicator(false);
-                showSyncNotification("網路已連線，嘗試同步資料...", "info");
+                showToast("網路已連線，嘗試同步資料...", "info");
                 syncOfflineOperations();
             });
 
             window.addEventListener("offline", () => {
                 toggleOfflineIndicator(true);
-                showSyncNotification("網路已離線，變更將在重新連線後同步。", "error");
+                showToast("網路已離線，變更將在重新連線後同步。", "error");
             });
 
             // 初始檢查網路狀態
             if (!navigator.onLine) {
                 toggleOfflineIndicator(true);
-                showSyncNotification("網路已離線，變更將在重新連線後同步。", "error");
+                showToast("網路已離線，變更將在重新連線後同步。", "error");
             }
 
             // 綁定事件
@@ -1324,8 +1141,6 @@
 
             addFoundBookBtn.addEventListener("click", async (e) => {
                 const bookData = JSON.parse(e.target.dataset.book);
-                // 在這裡可以彈出新增書籍模態框，讓用戶選擇分類並確認
-                // 為了簡化，這裡直接新增並設為未分類
                 await addBook({ ...bookData, category: "uncategorized" });
                 closeAddByIsbnModal();
             });
@@ -1364,8 +1179,10 @@
                 renderBooks();
             });
         });
+
+        // 全域函數，供 HTML 中的 onclick 使用
+        window.openAddBookModal = openAddBookModal;
     </script>
 </body>
 </html>
-
 
