@@ -1,547 +1,245 @@
-// Firebase 整合模組
-// 此文件包含所有與 Firebase Firestore 互動的函式
+import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-// Firebase 配置和初始化
-const firebaseConfig = {
-  apiKey: "AIzaSyBhufd0TSjVN-6UZX0mjjNwozPma1KjiLw",
-  authDomain: "booktracker-eeb80.firebaseapp.com",
-  projectId: "booktracker-eeb80",
-  storageBucket: "booktracker-eeb80.firebasestorage.app",
-  messagingSenderId: "1041414142866",
-  appId: "1:1041414142866:web:e1a396ed381137fab55f4b",
-  measurementId: "G-ZRHGTERX9B"
-};
+let _app;
+let _db;
+let _auth;
+let _user = null; // 保持 _user 變數，但不再用於構建集合路徑
+let _isSyncing = false;
+let _offlineOperations = [];
 
-// 全域變數
-let db;
-let isFirebaseInitialized = false;
+// 監聽器回調函數
+let _booksListenerCallback = null;
+let _categoriesListenerCallback = null;
 
-// 初始化 Firebase
-async function initializeFirebase() {
-    try {
-        // 動態導入 Firebase SDK
-        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, connectFirestoreEmulator } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        // 初始化 Firebase 應用
-        const app = initializeApp(firebaseConfig);
-        
-        // 初始化 Firestore
-        db = getFirestore(app);
-        
-        isFirebaseInitialized = true;
-        console.log('Firebase 初始化成功');
-        
+// UI 輔助函數 (從主應用程式傳入)
+let _showToast = null;
+let _showSyncNotification = null;
+let _updateSyncStatus = null;
+let _updateOfflineOperationsCount = null;
+let _toggleOfflineIndicator = null;
+
+const firebaseIntegration = {
+    initializeFirebase: async (app, db, showToast, showSyncNotification, updateSyncStatus, updateOfflineOperationsCount, toggleOfflineIndicator) => {
+        _app = app;
+        _db = db;
+        _auth = getAuth(_app);
+        _showToast = showToast;
+        _showSyncNotification = showSyncNotification;
+        _updateSyncStatus = updateSyncStatus;
+        _updateOfflineOperationsCount = updateOfflineOperationsCount;
+        _toggleOfflineIndicator = toggleOfflineIndicator;
+
+        _updateSyncStatus('disconnected', '連線中...');
+
+        // 匿名登入 (如果不需要，可以移除)
+        try {
+            // 檢查是否已啟用匿名登入，如果沒有則跳過
+            // 這裡不再強制匿名登入，因為用戶可能希望完全移除 Authentication
+            // 如果需要匿名登入，請確保在 Firebase Console 中啟用
+            // await signInAnonymously(_auth);
+            // console.log('Firebase 匿名登入成功');
+            // _updateSyncStatus('connected', '已連線');
+            // _showToast('Firebase 連線成功！', 'success');
+        } catch (error) {
+            console.error('Firebase 匿名登入失敗:', error);
+            // _updateSyncStatus('error', '連線失敗');
+            // _showToast('Firebase 連線失敗，請檢查配置和網路。', 'error');
+        }
+
+        // 監聽認證狀態變化 (如果不需要 Authentication，可以移除)
+        onAuthStateChanged(_auth, (user) => {
+            if (user) {
+                _user = user;
+                console.log('用戶已登入:', _user.uid);
+                _updateSyncStatus('connected', '已連線');
+                // 嘗試同步離線操作
+                firebaseIntegration.syncOfflineOperations();
+            } else {
+                _user = null;
+                console.log('用戶已登出');
+                _updateSyncStatus('disconnected', '已登出');
+            }
+        });
+
+        // 監聽網路連線狀態
+        window.addEventListener('online', () => {
+            _toggleOfflineIndicator(false);
+            _showSyncNotification('網路已連線，嘗試同步資料...', 'info');
+            firebaseIntegration.syncOfflineOperations();
+        });
+
+        window.addEventListener('offline', () => {
+            _toggleOfflineIndicator(true);
+            _showSyncNotification('網路已離線，變更將在重新連線後同步。', 'error');
+        });
+
+        // 初始檢查網路狀態
+        if (!navigator.onLine) {
+            _toggleOfflineIndicator(true);
+            _showSyncNotification('網路已離線，變更將在重新連線後同步。', 'error');
+        }
+
         return true;
-    } catch (error) {
-        console.error('Firebase 初始化失敗:', error);
-        isFirebaseInitialized = false;
-        return false;
-    }
-}
+    },
 
-// 檢查 Firebase 是否已初始化
-function ensureFirebaseInitialized() {
-    if (!isFirebaseInitialized) {
-        throw new Error('Firebase 尚未初始化。請先調用 initializeFirebase()');
-    }
-}
+    // 獲取當前用戶 ID (不再用於構建集合路徑)
+    getCurrentUserId: () => {
+        return _user ? _user.uid : null;
+    },
 
-// ==================== 書籍相關操作 ====================
+    // 獲取 Firestore 實例
+    getFirestoreInstance: () => {
+        return _db;
+    },
 
-// 獲取所有書籍
-async function getBooksFromFirestore() {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { collection, getDocs, orderBy, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const booksRef = collection(db, 'books');
-        const q = query(booksRef, orderBy('createdAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        
-        const books = [];
-        querySnapshot.forEach((doc) => {
-            books.push({
+    // 監聽書籍資料變化
+    listenToBooksChanges: (callback) => {
+        _booksListenerCallback = callback;
+        // 直接監聽 'books' 集合，不使用用戶 ID
+        const booksCollectionRef = collection(_db, `books`);
+        return onSnapshot(booksCollectionRef, (snapshot) => {
+            const books = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate() || new Date(),
-                updatedAt: doc.data().updatedAt?.toDate() || new Date()
-            });
+                createdAt: doc.data().createdAt ? doc.data().createdAt.toDate() : new Date(),
+                updatedAt: doc.data().updatedAt ? doc.data().updatedAt.toDate() : new Date()
+            }));
+            _booksListenerCallback(books);
+            _updateSyncStatus('connected', '已連線', new Date().getTime());
+        }, (error) => {
+            console.error('監聽書籍變化失敗:', error);
+            _updateSyncStatus('error', '同步錯誤');
+            _showSyncNotification('書籍資料同步失敗，請檢查網路或重新整理。', 'error');
         });
-        
-        console.log(`從 Firestore 獲取了 ${books.length} 本書籍`);
-        return books;
-    } catch (error) {
-        console.error('獲取書籍失敗:', error);
-        throw error;
-    }
-}
+    },
 
-// 添加書籍到 Firestore
-async function addBookToFirestore(bookData) {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const booksRef = collection(db, 'books');
-        
-        // 準備書籍資料
-        const bookToAdd = {
-            title: bookData.title || '',
-            author: bookData.author || '',
-            category: bookData.category || 'uncategorized',
-            cover: bookData.cover || '',
-            isbn: bookData.isbn || '',
-            description: bookData.description || '',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-        };
-        
-        const docRef = await addDoc(booksRef, bookToAdd);
-        console.log('書籍已添加，ID:', docRef.id);
-        
-        return {
-            id: docRef.id,
-            ...bookToAdd,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-    } catch (error) {
-        console.error('添加書籍失敗:', error);
-        throw error;
-    }
-}
-
-// 更新書籍
-async function updateBookInFirestore(bookId, updateData) {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { doc, updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const bookRef = doc(db, 'books', bookId);
-        
-        const dataToUpdate = {
-            ...updateData,
-            updatedAt: serverTimestamp()
-        };
-        
-        await updateDoc(bookRef, dataToUpdate);
-        console.log('書籍已更新，ID:', bookId);
-        
-        return true;
-    } catch (error) {
-        console.error('更新書籍失敗:', error);
-        throw error;
-    }
-}
-
-// 刪除書籍
-async function deleteBookFromFirestore(bookId) {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const bookRef = doc(db, 'books', bookId);
-        await deleteDoc(bookRef);
-        
-        console.log('書籍已刪除，ID:', bookId);
-        return true;
-    } catch (error) {
-        console.error('刪除書籍失敗:', error);
-        throw error;
-    }
-}
-
-// ==================== 分類相關操作 ====================
-
-// 獲取所有分類
-async function getCategoriesFromFirestore() {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { collection, getDocs, orderBy, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const categoriesRef = collection(db, 'categories');
-        const q = query(categoriesRef, orderBy('name', 'asc'));
-        const querySnapshot = await getDocs(q);
-        
-        const categories = [];
-        querySnapshot.forEach((doc) => {
-            categories.push({
+    // 監聽分類資料變化
+    listenToCategoriesChanges: (callback) => {
+        _categoriesListenerCallback = callback;
+        // 直接監聽 'categories' 集合，不使用用戶 ID
+        const categoriesCollectionRef = collection(_db, `categories`);
+        return onSnapshot(categoriesCollectionRef, (snapshot) => {
+            const categories = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt?.toDate() || new Date(),
-                updatedAt: doc.data().updatedAt?.toDate() || new Date()
-            });
+                ...doc.data()
+            }));
+            _categoriesListenerCallback(categories);
+            _updateSyncStatus('connected', '已連線', new Date().getTime());
+        }, (error) => {
+            console.error('監聽分類變化失敗:', error);
+            _updateSyncStatus('error', '同步錯誤');
+            _showSyncNotification('分類資料同步失敗，請檢查網路或重新整理。', 'error');
         });
-        
-        console.log(`從 Firestore 獲取了 ${categories.length} 個分類`);
-        return categories;
-    } catch (error) {
-        console.error('獲取分類失敗:', error);
-        throw error;
-    }
-}
+    },
 
-// 添加分類到 Firestore
-async function addCategoryToFirestore(categoryData) {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const categoriesRef = collection(db, 'categories');
-        
-        // 準備分類資料
-        const categoryToAdd = {
-            name: categoryData.name || '',
-            parentId: categoryData.parentId || null,
-            path: categoryData.path || '',
-            level: categoryData.level || 0,
-            description: categoryData.description || '',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-        };
-        
-        const docRef = await addDoc(categoriesRef, categoryToAdd);
-        console.log('分類已添加，ID:', docRef.id);
-        
-        return {
-            id: docRef.id,
-            ...categoryToAdd,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
-    } catch (error) {
-        console.error('添加分類失敗:', error);
-        throw error;
-    }
-}
+    // 通用：從集合中獲取所有文件
+    getDocsFromCollection: async (collectionName) => {
+        const querySnapshot = await getDocs(collection(_db, collectionName));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    },
 
-// 更新分類
-async function updateCategoryInFirestore(categoryId, updateData) {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { doc, updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const categoryRef = doc(db, 'categories', categoryId);
-        
-        const dataToUpdate = {
-            ...updateData,
-            updatedAt: serverTimestamp()
-        };
-        
-        await updateDoc(categoryRef, dataToUpdate);
-        console.log('分類已更新，ID:', categoryId);
-        
-        return true;
-    } catch (error) {
-        console.error('更新分類失敗:', error);
-        throw error;
-    }
-}
+    // 通用：向集合添加文件
+    addDocToCollection: async (collectionName, data) => {
+        const docRef = await addDoc(collection(_db, collectionName), { ...data, createdAt: new Date(), updatedAt: new Date() });
+        return { id: docRef.id, ...data };
+    },
 
-// 刪除分類
-async function deleteCategoryFromFirestore(categoryId) {
-    try {
-        ensureFirebaseInitialized();
-        
-        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        
-        const categoryRef = doc(db, 'categories', categoryId);
-        await deleteDoc(categoryRef);
-        
-        console.log('分類已刪除，ID:', categoryId);
-        return true;
-    } catch (error) {
-        console.error('刪除分類失敗:', error);
-        throw error;
-    }
-}
+    // 通用：更新集合中的文件
+    updateDocInCollection: async (collectionName, docId, data) => {
+        const docRef = doc(_db, collectionName, docId);
+        await updateDoc(docRef, { ...data, updatedAt: new Date() });
+    },
 
-// ==================== 階層化分類特殊操作 ====================
+    // 通用：從集合中刪除文件
+    deleteDocFromCollection: async (collectionName, docId) => {
+        const docRef = doc(_db, collectionName, docId);
+        await deleteDoc(docRef);
+    },
 
-// 添加階層化分類（包含路徑計算）
-async function addHierarchicalCategoryToFirestore(categoryData) {
-    try {
-        ensureFirebaseInitialized();
-        
-        // 首先獲取所有現有分類以計算路徑和層級
-        const existingCategories = await getCategoriesFromFirestore();
-        
-        // 驗證分類名稱在同一層級下是否重複
-        const isDuplicate = existingCategories.some(cat => 
-            cat.name === categoryData.name && 
-            cat.parentId === categoryData.parentId
-        );
-        
-        if (isDuplicate) {
-            throw new Error(`分類 "${categoryData.name}" 在此層級下已存在`);
+    // 添加離線操作
+    addOfflineOperation: (operation) => {
+        _offlineOperations.push(operation);
+        localStorage.setItem('offlineOperations', JSON.stringify(_offlineOperations));
+        _updateOfflineOperationsCount(_offlineOperations.length);
+        _showToast('變更已儲存至離線佇列', 'info');
+    },
+
+    // 同步離線操作
+    syncOfflineOperations: async () => {
+        if (_isSyncing || !navigator.onLine) { // 移除 _user 檢查
+            return;
         }
-        
-        // 計算層級和路徑
-        const level = calculateCategoryLevel(existingCategories, categoryData.parentId);
-        const path = buildCategoryPath(existingCategories, categoryData.parentId) + "/" + categoryData.name;
-        
-        // 限制最大深度
-        if (level >= 5) {
-            throw new Error("分類層級不能超過 5 層");
+
+        _isSyncing = true;
+        _updateSyncStatus('syncing', '同步中...');
+        _showSyncNotification('正在同步離線變更...', 'info');
+
+        const storedOperations = JSON.parse(localStorage.getItem('offlineOperations') || '[]');
+        _offlineOperations = storedOperations;
+        _updateOfflineOperationsCount(_offlineOperations.length);
+
+        if (_offlineOperations.length === 0) {
+            _isSyncing = false;
+            _updateSyncStatus('connected', '已連線', new Date().getTime());
+            _showSyncNotification('所有變更已同步完成！', 'success');
+            return;
         }
-        
-        // 添加分類
-        const newCategory = await addCategoryToFirestore({
-            ...categoryData,
-            path: path,
-            level: level
-        });
-        
-        return newCategory;
-    } catch (error) {
-        console.error('添加階層化分類失敗:', error);
-        throw error;
-    }
-}
 
-// 刪除階層化分類（包含子分類處理）
-async function deleteHierarchicalCategoryFromFirestore(categoryId) {
-    try {
-        ensureFirebaseInitialized();
-        
-        // 獲取所有分類和書籍
-        const [categories, books] = await Promise.all([
-            getCategoriesFromFirestore(),
-            getBooksFromFirestore()
-        ]);
-        
-        // 獲取所有子分類ID
-        const allSubCategoryIds = getAllSubCategoryIds(categories, categoryId);
-        const allCategoryIdsToDelete = [categoryId, ...allSubCategoryIds];
-        
-        // 更新相關書籍的分類為 "uncategorized"
-        const booksToUpdate = books.filter(book => allCategoryIdsToDelete.includes(book.category));
-        
-        // 批量更新書籍
-        const updatePromises = booksToUpdate.map(book => 
-            updateBookInFirestore(book.id, { category: 'uncategorized' })
-        );
-        
-        // 批量刪除分類
-        const deletePromises = allCategoryIdsToDelete.map(id => 
-            deleteCategoryFromFirestore(id)
-        );
-        
-        // 執行所有操作
-        await Promise.all([...updatePromises, ...deletePromises]);
-        
-        console.log(`已刪除分類及其 ${allSubCategoryIds.length} 個子分類，並更新了 ${booksToUpdate.length} 本書籍`);
-        return true;
-    } catch (error) {
-        console.error('刪除階層化分類失敗:', error);
-        throw error;
-    }
-}
+        const batch = writeBatch(_db);
+        let hasError = false;
 
-// ==================== 即時監聽功能 ====================
-
-// 監聽書籍變更
-function listenToBooksChanges(callback) {
-    try {
-        ensureFirebaseInitialized();
-        
-        import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(({ collection, onSnapshot, orderBy, query }) => {
-            const booksRef = collection(db, 'books');
-            const q = query(booksRef, orderBy('createdAt', 'desc'));
-            
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const books = [];
-                querySnapshot.forEach((doc) => {
-                    books.push({
-                        id: doc.id,
-                        ...doc.data(),
-                        createdAt: doc.data().createdAt?.toDate() || new Date(),
-                        updatedAt: doc.data().updatedAt?.toDate() || new Date()
-                    });
-                });
-                
-                console.log('書籍資料已更新，共', books.length, '本');
-                callback(books);
-            }, (error) => {
-                console.error('監聽書籍變更失敗:', error);
-            });
-            
-            return unsubscribe;
-        });
-    } catch (error) {
-        console.error('設置書籍監聽失敗:', error);
-    }
-}
-
-// 監聽分類變更
-function listenToCategoriesChanges(callback) {
-    try {
-        ensureFirebaseInitialized();
-        
-        import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(({ collection, onSnapshot, orderBy, query }) => {
-            const categoriesRef = collection(db, 'categories');
-            const q = query(categoriesRef, orderBy('name', 'asc'));
-            
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const categories = [];
-                querySnapshot.forEach((doc) => {
-                    categories.push({
-                        id: doc.id,
-                        ...doc.data(),
-                        createdAt: doc.data().createdAt?.toDate() || new Date(),
-                        updatedAt: doc.data().updatedAt?.toDate() || new Date()
-                    });
-                });
-                
-                console.log('分類資料已更新，共', categories.length, '個');
-                callback(categories);
-            }, (error) => {
-                console.error('監聽分類變更失敗:', error);
-            });
-            
-            return unsubscribe;
-        });
-    } catch (error) {
-        console.error('設置分類監聽失敗:', error);
-    }
-}
-
-// ==================== 工具函式 ====================
-
-// 計算分類層級
-function calculateCategoryLevel(categories, categoryId) {
-    if (!categoryId) return 0;
-    
-    const category = categories.find(cat => cat.id === categoryId);
-    if (!category || !category.parentId) return 0;
-    
-    return calculateCategoryLevel(categories, category.parentId) + 1;
-}
-
-// 構建分類路徑
-function buildCategoryPath(categories, categoryId) {
-    if (!categoryId) return "";
-    
-    const category = categories.find(cat => cat.id === categoryId);
-    if (!category) return "";
-    
-    if (!category.parentId) {
-        return "/" + category.name;
-    }
-    
-    const parentPath = buildCategoryPath(categories, category.parentId);
-    return parentPath + "/" + category.name;
-}
-
-// 獲取所有子分類ID
-function getAllSubCategoryIds(categories, parentId) {
-    const subCategoryIds = [];
-    
-    categories.forEach(category => {
-        if (category.parentId === parentId) {
-            subCategoryIds.push(category.id);
-            // 遞歸獲取子分類的子分類
-            subCategoryIds.push(...getAllSubCategoryIds(categories, category.id));
+        for (const op of _offlineOperations) {
+            try {
+                // 直接使用 'books' 或 'categories' 集合
+                const docRef = doc(_db, op.collection, op.id);
+                switch (op.type) {
+                    case 'add':
+                        // 對於新增操作，如果 ID 已經存在，則更新；否則新增
+                        const existingDoc = await getDoc(docRef);
+                        if (existingDoc.exists()) {
+                            batch.update(docRef, op.data);
+                        } else {
+                            batch.set(docRef, op.data);
+                        }
+                        break;
+                    case 'update':
+                        batch.update(docRef, op.data);
+                        break;
+                    case 'delete':
+                        batch.delete(docRef);
+                        break;
+                }
+            } catch (error) {
+                console.error('處理離線操作失敗:', op, error);
+                hasError = true;
+                // 不中斷循環，繼續處理其他操作
+            }
         }
-    });
-    
-    return subCategoryIds;
-}
 
-// ==================== 資料遷移功能 ====================
-
-// 從本地儲存遷移到 Firebase
-async function migrateLocalDataToFirebase() {
-    try {
-        ensureFirebaseInitialized();
-        
-        // 獲取本地儲存的資料
-        const localBooks = JSON.parse(localStorage.getItem('myBookTrackerBooks') || '[]');
-        const localCategories = JSON.parse(localStorage.getItem('myBookTrackerCategories') || '[]');
-        
-        console.log(`準備遷移 ${localBooks.length} 本書籍和 ${localCategories.length} 個分類`);
-        
-        // 遷移分類
-        const categoryMigrationPromises = localCategories.map(category => 
-            addCategoryToFirestore({
-                name: category.name,
-                parentId: category.parentId,
-                path: category.path,
-                level: category.level,
-                description: category.description || ''
-            })
-        );
-        
-        await Promise.all(categoryMigrationPromises);
-        console.log('分類遷移完成');
-        
-        // 遷移書籍
-        const bookMigrationPromises = localBooks.map(book => 
-            addBookToFirestore({
-                title: book.title,
-                author: book.author,
-                category: book.category,
-                cover: book.cover,
-                isbn: book.isbn,
-                description: book.description || ''
-            })
-        );
-        
-        await Promise.all(bookMigrationPromises);
-        console.log('書籍遷移完成');
-        
-        return true;
-    } catch (error) {
-        console.error('資料遷移失敗:', error);
-        throw error;
+        try {
+            await batch.commit();
+            _offlineOperations = [];
+            localStorage.removeItem('offlineOperations');
+            _updateOfflineOperationsCount(0);
+            _updateSyncStatus('connected', '已連線', new Date().getTime());
+            _showSyncNotification('所有離線變更已成功同步！', 'success');
+        } catch (error) {
+            console.error('提交離線操作批次失敗:', error);
+            _updateSyncStatus('error', '同步錯誤');
+            _showSyncNotification('離線變更同步失敗，請重試。', 'error');
+            hasError = true;
+        } finally {
+            _isSyncing = false;
+            if (hasError) {
+                _showToast('部分離線變更同步失敗，請檢查控制台。', 'error');
+            }
+        }
     }
-}
-
-// 導出所有函式供全域使用
-window.firebaseIntegration = {
-    // 初始化
-    initializeFirebase,
-    
-    // 書籍操作
-    getBooksFromFirestore,
-    addBookToFirestore,
-    updateBookInFirestore,
-    deleteBookFromFirestore,
-    
-    // 分類操作
-    getCategoriesFromFirestore,
-    addCategoryToFirestore,
-    updateCategoryInFirestore,
-    deleteCategoryFromFirestore,
-    
-    // 階層化分類操作
-    addHierarchicalCategoryToFirestore,
-    deleteHierarchicalCategoryFromFirestore,
-    
-    // 即時監聽
-    listenToBooksChanges,
-    listenToCategoriesChanges,
-    
-    // 工具函式
-    calculateCategoryLevel,
-    buildCategoryPath,
-    getAllSubCategoryIds,
-    
-    // 資料遷移
-    migrateLocalDataToFirebase
 };
 
-// 自動初始化 Firebase
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('開始初始化 Firebase...');
-    await initializeFirebase();
-});
+// 導出 firebaseIntegration 物件
+window.firebaseIntegration = firebaseIntegration;
+
+
 
