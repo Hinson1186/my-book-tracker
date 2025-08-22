@@ -11,10 +11,10 @@ let categoriesUnsubscribe = null;
 // 初始化分類資料
 async function initializeCategoriesData() {
     try {
-        console.log('開始初始化分類資料...');
+        console.log("開始初始化分類資料...");
         
         // 檢查是否有本地分類資料需要遷移
-        const localCategories = JSON.parse(localStorage.getItem('myBookTrackerCategories') || '[]');
+        const localCategories = JSON.parse(localStorage.getItem("myBookTrackerCategories") || "[]");
         
         if (localCategories.length > 0) {
             console.log(`發現 ${localCategories.length} 個本地分類，準備遷移到 Firebase`);
@@ -23,8 +23,8 @@ async function initializeCategoriesData() {
             if (confirm(`發現 ${localCategories.length} 個本地分類。是否要將它們遷移到雲端資料庫？`)) {
                 await migrateLocalCategoriesToFirebase(localCategories);
                 // 清除本地資料
-                localStorage.removeItem('myBookTrackerCategories');
-                showToast('本地分類已成功遷移到雲端！', 'success');
+                localStorage.removeItem("myBookTrackerCategories");
+                showToast("本地分類已成功遷移到雲端！", "success");
             }
         }
         
@@ -39,12 +39,12 @@ async function initializeCategoriesData() {
         // 設置即時監聽
         setupCategoriesRealTimeListener();
         
-        console.log('分類資料初始化完成');
+        console.log("分類資料初始化完成");
     } catch (error) {
-        console.error('初始化分類資料失敗:', error);
+        console.error("初始化分類資料失敗:", error);
         
         // 如果 Firebase 失敗，回退到本地儲存
-        console.log('回退到本地儲存模式');
+        console.log("回退到本地儲存模式");
         loadCategoriesFromLocalStorage();
     }
 }
@@ -54,7 +54,7 @@ async function loadCategoriesFromFirebase() {
     try {
         isLoadingCategories = true;
         
-        categories = await window.firebaseIntegration.getCategoriesFromFirestore();
+        categories = await window.firebaseIntegration.getDocsFromCollection("categories");
         
         console.log(`從 Firebase 載入了 ${categories.length} 個分類`);
         
@@ -62,7 +62,7 @@ async function loadCategoriesFromFirebase() {
         renderCategoriesList();
         
     } catch (error) {
-        console.error('從 Firebase 載入分類失敗:', error);
+        console.error("從 Firebase 載入分類失敗:", error);
         throw error;
     } finally {
         isLoadingCategories = false;
@@ -72,7 +72,7 @@ async function loadCategoriesFromFirebase() {
 // 從本地儲存載入分類（回退方案）
 function loadCategoriesFromLocalStorage() {
     try {
-        const localCategories = localStorage.getItem('myBookTrackerCategories');
+        const localCategories = localStorage.getItem("myBookTrackerCategories");
         categories = localCategories ? JSON.parse(localCategories) : getDefaultCategories();
         
         console.log(`從本地儲存載入了 ${categories.length} 個分類`);
@@ -81,7 +81,7 @@ function loadCategoriesFromLocalStorage() {
         renderCategoriesList();
         
     } catch (error) {
-        console.error('從本地儲存載入分類失敗:', error);
+        console.error("從本地儲存載入分類失敗:", error);
         categories = getDefaultCategories();
         renderCategoriesList();
     }
@@ -91,28 +91,28 @@ function loadCategoriesFromLocalStorage() {
 function getDefaultCategories() {
     return [
         {
-            id: 'fiction',
-            name: 'Fiction',
+            id: "fiction",
+            name: "Fiction",
             parentId: null,
-            path: '/Fiction',
+            path: "/Fiction",
             level: 0,
             createdAt: new Date(),
             updatedAt: new Date()
         },
         {
-            id: 'non-fiction',
-            name: 'Non-Fiction',
+            id: "non-fiction",
+            name: "Non-Fiction",
             parentId: null,
-            path: '/Non-Fiction',
+            path: "/Non-Fiction",
             level: 0,
             createdAt: new Date(),
             updatedAt: new Date()
         },
         {
-            id: 'uncategorized',
-            name: 'Uncategorized',
+            id: "uncategorized",
+            name: "Uncategorized",
             parentId: null,
-            path: '/Uncategorized',
+            path: "/Uncategorized",
             level: 0,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -123,12 +123,12 @@ function getDefaultCategories() {
 // 創建預設分類
 async function createDefaultCategories() {
     try {
-        console.log('創建預設分類...');
+        console.log("創建預設分類...");
         
         const defaultCategories = getDefaultCategories();
         
         const createPromises = defaultCategories.map(category => 
-            window.firebaseIntegration.addCategoryToFirestore({
+            window.firebaseIntegration.addDocToCollection("categories", {
                 name: category.name,
                 parentId: category.parentId,
                 path: category.path,
@@ -138,13 +138,13 @@ async function createDefaultCategories() {
         );
         
         await Promise.all(createPromises);
-        console.log('預設分類創建完成');
+        console.log("預設分類創建完成");
         
     } catch (error) {
-        console.error('創建預設分類失敗:', error);
+        console.error("創建預設分類失敗:", error);
         // 如果 Firebase 失敗，使用本地預設分類
         categories = getDefaultCategories();
-        localStorage.setItem('myBookTrackerCategories', JSON.stringify(categories));
+        localStorage.setItem("myBookTrackerCategories", JSON.stringify(categories));
     }
 }
 
@@ -158,15 +158,15 @@ function setupCategoriesRealTimeListener() {
         
         // 設置新的監聽器
         categoriesUnsubscribe = window.firebaseIntegration.listenToCategoriesChanges((updatedCategories) => {
-            console.log('收到分類資料更新');
+            console.log("收到分類資料更新");
             categories = updatedCategories;
             renderCategoriesList();
             updateCategorySelectors();
         });
         
-        console.log('分類即時監聽已設置');
+        console.log("分類即時監聽已設置");
     } catch (error) {
-        console.error('設置分類即時監聽失敗:', error);
+        console.error("設置分類即時監聽失敗:", error);
     }
 }
 
@@ -177,12 +177,12 @@ async function migrateLocalCategoriesToFirebase(localCategories) {
         
         const migrationPromises = localCategories.map(async (category) => {
             try {
-                return await window.firebaseIntegration.addCategoryToFirestore({
+                return await window.firebaseIntegration.addDocToCollection("categories", {
                     name: category.name,
                     parentId: category.parentId || null,
                     path: category.path || `/${category.name}`,
                     level: category.level || 0,
-                    description: category.description || ''
+                    description: category.description || ""
                 });
             } catch (error) {
                 console.error(`遷移分類失敗: ${category.name}`, error);
@@ -197,7 +197,7 @@ async function migrateLocalCategoriesToFirebase(localCategories) {
         
         return successCount;
     } catch (error) {
-        console.error('遷移分類到 Firebase 失敗:', error);
+        console.error("遷移分類到 Firebase 失敗:", error);
         throw error;
     }
 }
@@ -209,7 +209,7 @@ async function addHierarchicalCategory(categoryData) {
     try {
         // 驗證必要欄位
         if (!categoryData.name || !categoryData.name.trim()) {
-            throw new Error('分類名稱為必填欄位');
+            throw new Error("分類名稱為必填欄位");
         }
         
         // 清理分類名稱
@@ -234,24 +234,24 @@ async function addHierarchicalCategory(categoryData) {
             throw new Error("分類層級不能超過 5 層");
         }
         
-        showLoadingIndicator('正在添加分類...');
+        showLoadingIndicator("正在添加分類...");
         
         // 嘗試添加到 Firebase
         try {
-            const newCategory = await window.firebaseIntegration.addHierarchicalCategoryToFirestore({
+            const newCategory = await window.firebaseIntegration.addDocToCollection("categories", {
                 name: cleanName,
                 parentId: categoryData.parentId || null,
                 path: path,
                 level: level,
-                description: categoryData.description || ''
+                description: categoryData.description || ""
             });
             
-            console.log('分類已添加到 Firebase:', newCategory.id);
-            showToast('分類添加成功！', 'success');
+            console.log("分類已添加到 Firebase:", newCategory.id);
+            showToast("分類添加成功！", "success");
             return newCategory.id;
             
         } catch (firebaseError) {
-            console.error('Firebase 添加失敗，回退到本地儲存:', firebaseError);
+            console.error("Firebase 添加失敗，回退到本地儲存:", firebaseError);
             
             // 回退到本地儲存
             const newCategory = {
@@ -260,23 +260,23 @@ async function addHierarchicalCategory(categoryData) {
                 parentId: categoryData.parentId || null,
                 path: path,
                 level: level,
-                description: categoryData.description || '',
+                description: categoryData.description || "",
                 createdAt: new Date(),
                 updatedAt: new Date()
             };
             
             categories.push(newCategory);
-            localStorage.setItem('myBookTrackerCategories', JSON.stringify(categories));
+            localStorage.setItem("myBookTrackerCategories", JSON.stringify(categories));
             
             renderCategoriesList();
             updateCategorySelectors();
-            showToast('分類已添加到本地儲存', 'success');
+            showToast("分類已添加到本地儲存", "success");
             return newCategory.id;
         }
         
     } catch (error) {
-        console.error('添加分類失敗:', error);
-        showToast(error.message || '添加分類失敗，請重試', 'error');
+        console.error("添加分類失敗:", error);
+        showToast(error.message || "添加分類失敗，請重試", "error");
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -289,7 +289,7 @@ async function updateCategory(categoryId, updateData) {
         // 驗證分類是否存在
         const categoryIndex = categories.findIndex(cat => cat.id === categoryId);
         if (categoryIndex === -1) {
-            throw new Error('找不到要更新的分類');
+            throw new Error("找不到要更新的分類");
         }
         
         const category = categories[categoryIndex];
@@ -307,16 +307,16 @@ async function updateCategory(categoryId, updateData) {
             }
         }
         
-        showLoadingIndicator('正在更新分類...');
+        showLoadingIndicator("正在更新分類...");
         
         // 嘗試更新到 Firebase
         try {
-            await window.firebaseIntegration.updateCategoryInFirestore(categoryId, updateData);
-            console.log('分類已在 Firebase 中更新:', categoryId);
-            showToast('分類更新成功！', 'success');
+            await window.firebaseIntegration.updateDocInCollection("categories", categoryId, updateData);
+            console.log("分類已在 Firebase 中更新:", categoryId);
+            showToast("分類更新成功！", "success");
             
         } catch (firebaseError) {
-            console.error('Firebase 更新失敗，回退到本地儲存:', firebaseError);
+            console.error("Firebase 更新失敗，回退到本地儲存:", firebaseError);
             
             // 回退到本地儲存
             categories[categoryIndex] = { 
@@ -324,16 +324,16 @@ async function updateCategory(categoryId, updateData) {
                 ...updateData,
                 updatedAt: new Date()
             };
-            localStorage.setItem('myBookTrackerCategories', JSON.stringify(categories));
+            localStorage.setItem("myBookTrackerCategories", JSON.stringify(categories));
             
             renderCategoriesList();
             updateCategorySelectors();
-            showToast('分類已在本地更新', 'success');
+            showToast("分類已在本地更新", "success");
         }
         
     } catch (error) {
-        console.error('更新分類失敗:', error);
-        showToast(error.message || '更新分類失敗，請重試', 'error');
+        console.error("更新分類失敗:", error);
+        showToast(error.message || "更新分類失敗，請重試", "error");
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -346,7 +346,7 @@ async function deleteHierarchicalCategory(categoryId) {
         // 驗證分類是否存在
         const category = categories.find(cat => cat.id === categoryId);
         if (!category) {
-            throw new Error('找不到要刪除的分類');
+            throw new Error("找不到要刪除的分類");
         }
         
         // 獲取所有子分類
@@ -358,22 +358,22 @@ async function deleteHierarchicalCategory(categoryId) {
         if (subCategories.length > 0) {
             confirmMessage += `\n這將同時刪除 ${subCategories.length} 個子分類。`;
         }
-        confirmMessage += '\n相關書籍將被移至 "Uncategorized" 分類。\n此操作無法撤銷。';
+        confirmMessage += "\n相關書籍將被移至 \"Uncategorized\" 分類。\n此操作無法撤銷。";
         
         if (!confirm(confirmMessage)) {
             return;
         }
         
-        showLoadingIndicator('正在刪除分類...');
+        showLoadingIndicator("正在刪除分類...");
         
         // 嘗試從 Firebase 刪除
         try {
-            await window.firebaseIntegration.deleteHierarchicalCategoryFromFirestore(categoryId);
-            console.log('分類已從 Firebase 刪除:', categoryId);
-            showToast(`成功刪除 ${totalCategoriesToDelete} 個分類！`, 'success');
+            await window.firebaseIntegration.deleteDocFromCollection("categories", categoryId);
+            console.log("分類已從 Firebase 刪除:", categoryId);
+            showToast(`成功刪除 ${totalCategoriesToDelete} 個分類！`, "success");
             
         } catch (firebaseError) {
-            console.error('Firebase 刪除失敗，回退到本地儲存:', firebaseError);
+            console.error("Firebase 刪除失敗，回退到本地儲存:", firebaseError);
             
             // 回退到本地儲存
             const allCategoryIdsToDelete = [categoryId, ...subCategories.map(cat => cat.id)];
@@ -384,22 +384,22 @@ async function deleteHierarchicalCategory(categoryId) {
                 const booksToUpdate = books.filter(book => allCategoryIdsToDelete.includes(book.category));
                 
                 booksToUpdate.forEach(book => {
-                    window.updateBookInFirestore(book.id, { category: 'uncategorized' });
+                    window.updateBookInFirestore(book.id, { category: "uncategorized" });
                 });
             }
             
             // 刪除分類
             categories = categories.filter(cat => !allCategoryIdsToDelete.includes(cat.id));
-            localStorage.setItem('myBookTrackerCategories', JSON.stringify(categories));
+            localStorage.setItem("myBookTrackerCategories", JSON.stringify(categories));
             
             renderCategoriesList();
             updateCategorySelectors();
-            showToast(`已從本地刪除 ${totalCategoriesToDelete} 個分類`, 'success');
+            showToast(`已從本地刪除 ${totalCategoriesToDelete} 個分類`, "success");
         }
         
     } catch (error) {
-        console.error('刪除分類失敗:', error);
-        showToast(error.message || '刪除分類失敗，請重試', 'error');
+        console.error("刪除分類失敗:", error);
+        showToast(error.message || "刪除分類失敗，請重試", "error");
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -488,7 +488,7 @@ function buildCategoryTree() {
 // 獲取分類的完整路徑
 function getCategoryFullPath(categoryId) {
     const category = categories.find(cat => cat.id === categoryId);
-    if (!category) return '';
+    if (!category) return "";
     
     return category.path || buildCategoryPath(categoryId);
 }
@@ -499,18 +499,18 @@ function getCategoryColor(category) {
     
     // 預定義顏色映射
     const colorMap = {
-        'fiction': '#3b82f6',      // 藍色
-        'non-fiction': '#10b981',  // 綠色
-        'science': '#8b5cf6',      // 紫色
-        'history': '#f59e0b',      // 橙色
-        'biography': '#ef4444',    // 紅色
-        'mystery': '#6b7280',      // 灰色
-        'romance': '#ec4899',      // 粉色
-        'fantasy': '#8b5cf6',      // 紫色
-        'thriller': '#374151',     // 深灰色
-        'comedy': '#fbbf24',       // 黃色
-        'drama': '#dc2626',        // 深紅色
-        'uncategorized': '#9ca3af' // 淺灰色
+        "fiction": "#3b82f6",      // 藍色
+        "non-fiction": "#10b981",  // 綠色
+        "science": "#8b5cf6",      // 紫色
+        "history": "#f59e0b",      // 橙色
+        "biography": "#ef4444",    // 紅色
+        "mystery": "#6b7280",      // 灰色
+        "romance": "#ec4899",      // 粉色
+        "fantasy": "#8b5cf6",      // 紫色
+        "thriller": "#374151",     // 深灰色
+        "comedy": "#fbbf24",       // 黃色
+        "drama": "#dc2626",        // 深紅色
+        "uncategorized": "#9ca3af" // 淺灰色
     };
     
     // 檢查預定義顏色
@@ -539,18 +539,18 @@ function getCategoryIcon(category) {
     
     // 預定義圖標映射
     const iconMap = {
-        'fiction': 'fa-book',
-        'non-fiction': 'fa-book-open',
-        'science': 'fa-flask',
-        'history': 'fa-landmark',
-        'biography': 'fa-user',
-        'mystery': 'fa-search',
-        'romance': 'fa-heart',
-        'fantasy': 'fa-magic',
-        'thriller': 'fa-bolt',
-        'comedy': 'fa-laugh',
-        'drama': 'fa-theater-masks',
-        'uncategorized': 'fa-question'
+        "fiction": "fa-book",
+        "non-fiction": "fa-book-open",
+        "science": "fa-flask",
+        "history": "fa-landmark",
+        "biography": "fa-user",
+        "mystery": "fa-question",
+        "romance": "fa-heart",
+        "fantasy": "fa-dragon",
+        "thriller": "fa-mask",
+        "comedy": "fa-laugh",
+        "drama": "fa-theater-masks",
+        "uncategorized": "fa-folder"
     };
     
     // 檢查預定義圖標
@@ -560,258 +560,42 @@ function getCategoryIcon(category) {
         }
     }
     
-    // 根據層級返回預設圖標
-    if (category.level === 0) {
-        return 'fa-folder';
-    } else {
-        return 'fa-folder-open';
-    }
-}
-
-// ==================== UI 更新函式 ====================
-
-// 渲染分類列表
-function renderCategoriesList() {
-    // 更新側邊欄分類列表
-    updateSidebarCategories();
-    
-    // 更新分類管理界面
-    updateCategoryManagementUI();
-}
-
-// 更新側邊欄分類
-function updateSidebarCategories() {
-    const categoriesList = document.getElementById('categoriesList');
-    if (!categoriesList) return;
-    
-    // 構建分類樹
-    const categoryTree = buildCategoryTree();
-    
-    // 清空現有內容
-    categoriesList.innerHTML = '';
-    
-    // 添加 "All" 選項
-    const allItem = document.createElement('li');
-    allItem.innerHTML = `
-        <a href="#" class="category-link flex items-center px-3 py-2 rounded-lg bg-indigo-100 text-indigo-700" data-category="all">
-            <i class="fas fa-list mr-2"></i>
-            <span>All</span>
-            <span class="ml-auto text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full" id="allBooksCount">0</span>
-        </a>
-    `;
-    categoriesList.appendChild(allItem);
-    
-    // 遞歸渲染分類樹
-    function renderCategoryNode(category, level = 0) {
-        const item = document.createElement('li');
-        const indent = level * 20;
-        const hasChildren = category.children && category.children.length > 0;
-        
-        item.innerHTML = `
-            <div class="flex items-center">
-                ${hasChildren ? `
-                    <button class="category-toggle p-1 hover:bg-gray-200 rounded" data-category-id="${category.id}" style="margin-left: ${indent}px">
-                        <i class="fas fa-chevron-right text-xs transition-transform"></i>
-                    </button>
-                ` : `<div style="width: 20px; margin-left: ${indent}px"></div>`}
-                <a href="#" class="category-link flex items-center flex-1 px-2 py-2 rounded-lg hover:bg-gray-100" data-category="${category.id}">
-                    <i class="fas ${getCategoryIcon(category)} mr-2" style="color: ${getCategoryColor(category)}"></i>
-                    <span>${category.name}</span>
-                    <span class="ml-auto text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full category-count" data-category-id="${category.id}">0</span>
-                </a>
-            </div>
-            ${hasChildren ? `<ul class="category-children hidden ml-4"></ul>` : ''}
-        `;
-        
-        categoriesList.appendChild(item);
-        
-        // 如果有子分類，遞歸渲染
-        if (hasChildren) {
-            const childrenContainer = item.querySelector('.category-children');
-            category.children.forEach(child => {
-                const childItem = renderCategoryNode(child, level + 1);
-                childrenContainer.appendChild(childItem);
-            });
-        }
-        
-        return item;
-    }
-    
-    // 渲染所有根分類
-    categoryTree.forEach(category => {
-        renderCategoryNode(category);
-    });
-    
-    // 更新書籍計數
-    updateCategoryBookCounts();
-    
-    // 設置事件監聽器
-    setupCategoryEventListeners();
-}
-
-// 更新分類選擇器
-function updateCategorySelectors() {
-    // 更新添加書籍表單中的分類選擇器
-    const bookCategorySelect = document.getElementById('bookCategory');
-    if (bookCategorySelect) {
-        const currentValue = bookCategorySelect.value;
-        bookCategorySelect.innerHTML = '';
-        
-        // 添加 "Uncategorized" 選項
-        const uncategorizedOption = document.createElement('option');
-        uncategorizedOption.value = 'uncategorized';
-        uncategorizedOption.textContent = 'Uncategorized';
-        bookCategorySelect.appendChild(uncategorizedOption);
-        
-        // 遞歸添加分類選項
-        function addCategoryOptions(categoryList, prefix = '') {
-            categoryList.forEach(category => {
-                if (category.id !== 'uncategorized') {
-                    const option = document.createElement('option');
-                    option.value = category.id;
-                    option.textContent = prefix + category.name;
-                    bookCategorySelect.appendChild(option);
-                    
-                    // 如果有子分類，遞歸添加
-                    const subCategories = categories.filter(cat => cat.parentId === category.id);
-                    if (subCategories.length > 0) {
-                        addCategoryOptions(subCategories, prefix + '  ');
-                    }
-                }
-            });
-        }
-        
-        const rootCategories = categories.filter(cat => !cat.parentId);
-        addCategoryOptions(rootCategories);
-        
-        // 恢復之前的選擇
-        if (currentValue) {
-            bookCategorySelect.value = currentValue;
-        }
-    }
-}
-
-// 更新分類管理界面
-function updateCategoryManagementUI() {
-    // 這個函式會在分類管理模態框中更新分類樹
-    // 具體實現取決於分類管理界面的設計
-}
-
-// 更新分類書籍計數
-function updateCategoryBookCounts() {
-    if (!window.firebaseBookOperations) return;
-    
-    const books = window.firebaseBookOperations.getBooks();
-    
-    // 更新 "All" 計數
-    const allCountElement = document.getElementById('allBooksCount');
-    if (allCountElement) {
-        allCountElement.textContent = books.length;
-    }
-    
-    // 更新各分類計數
-    categories.forEach(category => {
-        const categoryBooks = books.filter(book => {
-            // 包含該分類及其所有子分類的書籍
-            const subCategoryIds = getAllSubCategoryIds(category.id);
-            return book.category === category.id || subCategoryIds.includes(book.category);
-        });
-        
-        const countElement = document.querySelector(`[data-category-id="${category.id}"]`);
-        if (countElement) {
-            countElement.textContent = categoryBooks.length;
-        }
-    });
-}
-
-// 設置分類事件監聽器
-function setupCategoryEventListeners() {
-    // 分類點擊事件
-    document.querySelectorAll('.category-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const categoryId = e.currentTarget.dataset.category;
-            
-            // 更新活動分類
-            document.querySelectorAll('.category-link').forEach(l => {
-                l.classList.remove('bg-indigo-100', 'text-indigo-700');
-                l.classList.add('hover:bg-gray-100');
-            });
-            e.currentTarget.classList.add('bg-indigo-100', 'text-indigo-700');
-            e.currentTarget.classList.remove('hover:bg-gray-100');
-            
-            // 觸發分類篩選
-            if (window.setCurrentCategory) {
-                window.setCurrentCategory(categoryId);
-            }
-        });
-    });
-    
-    // 分類摺疊/展開事件
-    document.querySelectorAll('.category-toggle').forEach(toggle => {
-        toggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const categoryId = e.currentTarget.dataset.categoryId;
-            const chevron = e.currentTarget.querySelector('i');
-            const parentLi = e.currentTarget.closest('li');
-            const childrenContainer = parentLi.querySelector('.category-children');
-            
-            if (childrenContainer) {
-                const isExpanded = !childrenContainer.classList.contains('hidden');
-                
-                if (isExpanded) {
-                    // 摺疊
-                    childrenContainer.classList.add('hidden');
-                    chevron.style.transform = 'rotate(0deg)';
-                } else {
-                    // 展開
-                    childrenContainer.classList.remove('hidden');
-                    chevron.style.transform = 'rotate(90deg)';
-                }
-                
-                // 保存摺疊狀態
-                const expandedCategories = JSON.parse(localStorage.getItem('expandedCategories') || '[]');
-                if (isExpanded) {
-                    const index = expandedCategories.indexOf(categoryId);
-                    if (index > -1) {
-                        expandedCategories.splice(index, 1);
-                    }
-                } else {
-                    if (!expandedCategories.includes(categoryId)) {
-                        expandedCategories.push(categoryId);
-                    }
-                }
-                localStorage.setItem('expandedCategories', JSON.stringify(expandedCategories));
-            }
-        });
-    });
+    return "fa-folder"; // 預設圖標
 }
 
 // ==================== UI 輔助函式 ====================
 
-// 顯示載入指示器
-function showLoadingIndicator(message = '載入中...') {
-    // 這個函式在 firebase-book-operations.js 中已定義
-    if (window.firebaseBookOperations) {
-        window.firebaseBookOperations.showLoadingIndicator(message);
-    }
-}
-
-// 隱藏載入指示器
-function hideLoadingIndicator() {
-    // 這個函式在 firebase-book-operations.js 中已定義
-    if (window.firebaseBookOperations) {
-        window.firebaseBookOperations.hideLoadingIndicator();
-    }
-}
-
 // 顯示 Toast 通知
-function showToast(message, type = 'success') {
-    // 這個函式在 firebase-book-operations.js 中已定義
-    if (window.firebaseBookOperations) {
-        window.firebaseBookOperations.showToast(message, type);
+function showToast(message, type = "success") {
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add("show"), 100);
+    setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// 渲染分類列表（這個函式會被主應用程式調用）
+function renderCategoriesList() {
+    // 這個函式的實現在主 HTML 文件中
+    if (window.renderCategoriesList) {
+        window.renderCategoriesList();
+    }
+}
+
+// 更新分類選擇器（這個函式會被主應用程式調用）
+function updateCategorySelectors() {
+    // 這個函式的實現在主 HTML 文件中
+    if (window.updateCategorySelectors) {
+        window.updateCategorySelectors();
     }
 }
 
@@ -826,7 +610,7 @@ function cleanup() {
 }
 
 // 頁面卸載時清理資源
-window.addEventListener('beforeunload', cleanup);
+window.addEventListener("beforeunload", cleanup);
 
 // ==================== 導出函式 ====================
 
@@ -836,46 +620,44 @@ window.firebaseCategoryOperations = {
     initializeCategoriesData,
     
     // CRUD 操作
-    addHierarchicalCategory,
-    updateCategory,
-    deleteHierarchicalCategory,
+    addHierarchicalCategory: async (categoryData) => {
+        return await window.firebaseIntegration.addDocToCollection("categories", categoryData);
+    },
+    updateCategory: async (categoryId, updateData) => {
+        return await window.firebaseIntegration.updateDocInCollection("categories", categoryId, updateData);
+    },
+    deleteHierarchicalCategory: async (categoryId) => {
+        return await window.firebaseIntegration.deleteDocFromCollection("categories", categoryId);
+    },
     
     // 資料存取
     getCategories: () => categories,
-    getCategoriesCount: () => categories.length,
-    getCategoryById: (id) => categories.find(cat => cat.id === id),
-    
-    // 工具函式
-    calculateCategoryLevel,
-    buildCategoryPath,
-    getAllSubCategories,
-    getAllSubCategoryIds,
-    buildCategoryTree,
     getCategoryFullPath,
     getCategoryColor,
     getCategoryIcon,
+    getAllSubCategoryIds,
+    buildCategoryTree,
     
-    // UI 更新
-    renderCategoriesList,
-    updateCategorySelectors,
-    updateCategoryBookCounts,
+    // 工具函式
+    showToast,
     
     // 清理
     cleanup
 };
 
 // 自動初始化
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // 等待 Firebase 初始化完成
     if (window.firebaseIntegration) {
         try {
             await initializeCategoriesData();
         } catch (error) {
-            console.error('分類資料初始化失敗:', error);
+            console.error("分類資料初始化失敗:", error);
         }
     } else {
-        console.warn('Firebase 整合模組未載入，使用本地儲存');
+        console.warn("Firebase 整合模組未載入，使用本地儲存");
         loadCategoriesFromLocalStorage();
     }
 });
+
 
