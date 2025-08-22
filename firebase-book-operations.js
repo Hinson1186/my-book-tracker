@@ -1,5 +1,4 @@
-const GOOGLE_BOOKS_API_KEY = 'AIzaSyBNiBa24j2t4WmwU4WgNujGCAPiX6VRN_4';
-
+const GOOGLE_BOOKS_API_KEY = 
 // Firebase 書籍操作模組
 // 此文件包含所有與書籍相關的 Firebase 操作，替換原有的本地儲存邏輯
 
@@ -13,10 +12,10 @@ let booksUnsubscribe = null;
 // 初始化書籍資料
 async function initializeBooksData() {
     try {
-        console.log('開始初始化書籍資料...');
+        console.log("開始初始化書籍資料...");
         
         // 檢查是否有本地資料需要遷移
-        const localBooks = JSON.parse(localStorage.getItem('myBookTrackerBooks') || '[]');
+        const localBooks = JSON.parse(localStorage.getItem("myBookTrackerBooks") || "[]");
         
         if (localBooks.length > 0) {
             console.log(`發現 ${localBooks.length} 本本地書籍，準備遷移到 Firebase`);
@@ -25,8 +24,8 @@ async function initializeBooksData() {
             if (confirm(`發現 ${localBooks.length} 本本地書籍。是否要將它們遷移到雲端資料庫？`)) {
                 await migrateLocalBooksToFirebase(localBooks);
                 // 清除本地資料
-                localStorage.removeItem('myBookTrackerBooks');
-                showToast('本地資料已成功遷移到雲端！', 'success');
+                localStorage.removeItem("myBookTrackerBooks");
+                showToast("本地資料已成功遷移到雲端！", "success");
             }
         }
         
@@ -36,12 +35,12 @@ async function initializeBooksData() {
         // 設置即時監聽
         setupBooksRealTimeListener();
         
-        console.log('書籍資料初始化完成');
+        console.log("書籍資料初始化完成");
     } catch (error) {
-        console.error('初始化書籍資料失敗:', error);
+        console.error("初始化書籍資料失敗:", error);
         
         // 如果 Firebase 失敗，回退到本地儲存
-        console.log('回退到本地儲存模式');
+        console.log("回退到本地儲存模式");
         loadBooksFromLocalStorage();
     }
 }
@@ -52,7 +51,7 @@ async function loadBooksFromFirebase() {
         isLoadingBooks = true;
         showLoadingIndicator();
         
-        books = await window.firebaseIntegration.getBooksFromFirestore();
+        books = await window.firebaseIntegration.getDocsFromCollection("books");
         
         console.log(`從 Firebase 載入了 ${books.length} 本書籍`);
         
@@ -61,7 +60,7 @@ async function loadBooksFromFirebase() {
         updateStats();
         
     } catch (error) {
-        console.error('從 Firebase 載入書籍失敗:', error);
+        console.error("從 Firebase 載入書籍失敗:", error);
         throw error;
     } finally {
         isLoadingBooks = false;
@@ -72,7 +71,7 @@ async function loadBooksFromFirebase() {
 // 從本地儲存載入書籍（回退方案）
 function loadBooksFromLocalStorage() {
     try {
-        const localBooks = localStorage.getItem('myBookTrackerBooks');
+        const localBooks = localStorage.getItem("myBookTrackerBooks");
         books = localBooks ? JSON.parse(localBooks) : getDefaultBooks();
         
         console.log(`從本地儲存載入了 ${books.length} 本書籍`);
@@ -82,7 +81,7 @@ function loadBooksFromLocalStorage() {
         updateStats();
         
     } catch (error) {
-        console.error('從本地儲存載入書籍失敗:', error);
+        console.error("從本地儲存載入書籍失敗:", error);
         books = getDefaultBooks();
         renderBooks();
         updateStats();
@@ -98,7 +97,7 @@ function getDefaultBooks() {
             author: "Alex Michaelides",
             cover: "https://m.media-amazon.com/images/I/81p5L1VYKaL._AC_UF1000,1000_QL80_.jpg",
             category: "fiction",
-            createdAt: new Date('2024-01-01')
+            createdAt: new Date("2024-01-01")
         },
         {
             id: "2",
@@ -106,7 +105,7 @@ function getDefaultBooks() {
             author: "James Clear",
             cover: "https://m.media-amazon.com/images/I/91bYsX41DVL._AC_UF1000,1000_QL80_.jpg",
             category: "non-fiction",
-            createdAt: new Date('2024-01-02')
+            createdAt: new Date("2024-01-02")
         }
     ];
 }
@@ -121,15 +120,15 @@ function setupBooksRealTimeListener() {
         
         // 設置新的監聽器
         booksUnsubscribe = window.firebaseIntegration.listenToBooksChanges((updatedBooks) => {
-            console.log('收到書籍資料更新');
+            console.log("收到書籍資料更新");
             books = updatedBooks;
             renderBooks();
             updateStats();
         });
         
-        console.log('書籍即時監聽已設置');
+        console.log("書籍即時監聽已設置");
     } catch (error) {
-        console.error('設置書籍即時監聽失敗:', error);
+        console.error("設置書籍即時監聽失敗:", error);
     }
 }
 
@@ -140,13 +139,13 @@ async function migrateLocalBooksToFirebase(localBooks) {
         
         const migrationPromises = localBooks.map(async (book) => {
             try {
-                return await window.firebaseIntegration.addBookToFirestore({
+                return await window.firebaseIntegration.addDocToCollection("books", {
                     title: book.title,
                     author: book.author,
-                    category: book.category || 'uncategorized',
-                    cover: book.cover || '',
-                    isbn: book.isbn || '',
-                    description: book.description || ''
+                    category: book.category || "uncategorized",
+                    cover: book.cover || "",
+                    isbn: book.isbn || "",
+                    description: book.description || ""
                 });
             } catch (error) {
                 console.error(`遷移書籍失敗: ${book.title}`, error);
@@ -161,7 +160,7 @@ async function migrateLocalBooksToFirebase(localBooks) {
         
         return successCount;
     } catch (error) {
-        console.error('遷移書籍到 Firebase 失敗:', error);
+        console.error("遷移書籍到 Firebase 失敗:", error);
         throw error;
     }
 }
@@ -173,7 +172,7 @@ async function addBookToFirestore(bookData) {
     try {
         // 驗證必要欄位
         if (!bookData.title || !bookData.author) {
-            throw new Error('書名和作者為必填欄位');
+            throw new Error("書名和作者為必填欄位");
         }
         
         // 檢查是否有重複的 ISBN
@@ -184,16 +183,16 @@ async function addBookToFirestore(bookData) {
             }
         }
         
-        showLoadingIndicator('正在添加書籍...');
+        showLoadingIndicator("正在添加書籍...");
         
         // 嘗試添加到 Firebase
         try {
-            const newBook = await window.firebaseIntegration.addBookToFirestore(bookData);
-            console.log('書籍已添加到 Firebase:', newBook.id);
-            showToast('書籍添加成功！', 'success');
+            const newBook = await window.firebaseIntegration.addDocToCollection("books", bookData);
+            console.log("書籍已添加到 Firebase:", newBook.id);
+            showToast("書籍添加成功！", "success");
             return newBook.id;
         } catch (firebaseError) {
-            console.error('Firebase 添加失敗，回退到本地儲存:', firebaseError);
+            console.error("Firebase 添加失敗，回退到本地儲存:", firebaseError);
             
             // 回退到本地儲存
             const newBook = {
@@ -203,17 +202,17 @@ async function addBookToFirestore(bookData) {
             };
             
             books.push(newBook);
-            localStorage.setItem('myBookTrackerBooks', JSON.stringify(books));
+            localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
             
             renderBooks();
             updateStats();
-            showToast('書籍已添加到本地儲存', 'success');
+            showToast("書籍已添加到本地儲存", "success");
             return newBook.id;
         }
         
     } catch (error) {
-        console.error('添加書籍失敗:', error);
-        showToast(error.message || '添加書籍失敗，請重試', 'error');
+        console.error("添加書籍失敗:", error);
+        showToast(error.message || "添加書籍失敗，請重試", "error");
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -226,31 +225,31 @@ async function updateBookInFirestore(bookId, updateData) {
         // 驗證書籍是否存在
         const bookIndex = books.findIndex(book => book.id === bookId);
         if (bookIndex === -1) {
-            throw new Error('找不到要更新的書籍');
+            throw new Error("找不到要更新的書籍");
         }
         
-        showLoadingIndicator('正在更新書籍...');
+        showLoadingIndicator("正在更新書籍...");
         
         // 嘗試更新到 Firebase
         try {
-            await window.firebaseIntegration.updateBookInFirestore(bookId, updateData);
-            console.log('書籍已在 Firebase 中更新:', bookId);
-            showToast('書籍更新成功！', 'success');
+            await window.firebaseIntegration.updateDocInCollection("books", bookId, updateData);
+            console.log("書籍已在 Firebase 中更新:", bookId);
+            showToast("書籍更新成功！", "success");
         } catch (firebaseError) {
-            console.error('Firebase 更新失敗，回退到本地儲存:', firebaseError);
+            console.error("Firebase 更新失敗，回退到本地儲存:", firebaseError);
             
             // 回退到本地儲存
             books[bookIndex] = { ...books[bookIndex], ...updateData };
-            localStorage.setItem('myBookTrackerBooks', JSON.stringify(books));
+            localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
             
             renderBooks();
             updateStats();
-            showToast('書籍已在本地更新', 'success');
+            showToast("書籍已在本地更新", "success");
         }
         
     } catch (error) {
-        console.error('更新書籍失敗:', error);
-        showToast(error.message || '更新書籍失敗，請重試', 'error');
+        console.error("更新書籍失敗:", error);
+        showToast(error.message || "更新書籍失敗，請重試", "error");
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -263,7 +262,7 @@ async function deleteBookFromFirestore(bookId) {
         // 驗證書籍是否存在
         const book = books.find(book => book.id === bookId);
         if (!book) {
-            throw new Error('找不到要刪除的書籍');
+            throw new Error("找不到要刪除的書籍");
         }
         
         // 確認刪除
@@ -271,28 +270,28 @@ async function deleteBookFromFirestore(bookId) {
             return;
         }
         
-        showLoadingIndicator('正在刪除書籍...');
+        showLoadingIndicator("正在刪除書籍...");
         
         // 嘗試從 Firebase 刪除
         try {
-            await window.firebaseIntegration.deleteBookFromFirestore(bookId);
-            console.log('書籍已從 Firebase 刪除:', bookId);
-            showToast('書籍刪除成功！', 'success');
+            await window.firebaseIntegration.deleteDocFromCollection("books", bookId);
+            console.log("書籍已從 Firebase 刪除:", bookId);
+            showToast("書籍刪除成功！", "success");
         } catch (firebaseError) {
-            console.error('Firebase 刪除失敗，回退到本地儲存:', firebaseError);
+            console.error("Firebase 刪除失敗，回退到本地儲存:", firebaseError);
             
             // 回退到本地儲存
             books = books.filter(book => book.id !== bookId);
-            localStorage.setItem('myBookTrackerBooks', JSON.stringify(books));
+            localStorage.setItem("myBookTrackerBooks", JSON.stringify(books));
             
             renderBooks();
             updateStats();
-            showToast('書籍已從本地刪除', 'success');
+            showToast("書籍已從本地刪除", "success");
         }
         
     } catch (error) {
-        console.error('刪除書籍失敗:', error);
-        showToast(error.message || '刪除書籍失敗，請重試', 'error');
+        console.error("刪除書籍失敗:", error);
+        showToast(error.message || "刪除書籍失敗，請重試", "error");
         throw error;
     } finally {
         hideLoadingIndicator();
@@ -305,14 +304,14 @@ async function deleteBookFromFirestore(bookId) {
 async function searchBookByISBN(isbn) {
     try {
         // 清理 ISBN（移除空格和連字符）
-        const cleanISBN = isbn.replace(/[-\s]/g, '');
+        const cleanISBN = isbn.replace(/[-\s]/g, "");
         
         // 驗證 ISBN 格式
         if (!/^(97[89])?\d{9}[\dX]$/.test(cleanISBN)) {
-            throw new Error('無效的 ISBN 格式');
+            throw new Error("無效的 ISBN 格式");
         }
         
-        console.log('搜尋 ISBN:', cleanISBN);
+        console.log("搜尋 ISBN:", cleanISBN);
         
         // 首先嘗試 Google Books API
         try {
@@ -340,25 +339,25 @@ async function searchBookByISBN(isbn) {
                     
                     // 確保使用 HTTPS
                     if (coverUrl) {
-                        coverUrl = coverUrl.replace('http://', 'https://');
+                        coverUrl = coverUrl.replace("http://", "https://");
                         // 移除縮放參數以獲得更好的圖片品質
-                        coverUrl = coverUrl.replace(/&zoom=\d+/, '');
+                        coverUrl = coverUrl.replace(/&zoom=\d+/, "");
                     }
                 }
                 
                 return {
-                    title: book.title || 'Unknown Title',
-                    author: book.authors ? book.authors.join(', ') : 'Unknown Author',
+                    title: book.title || "Unknown Title",
+                    author: book.authors ? book.authors.join(", ") : "Unknown Author",
                     cover: coverUrl,
                     isbn: cleanISBN,
-                    description: book.description || '',
-                    publishedDate: book.publishedDate || '',
+                    description: book.description || "",
+                    publishedDate: book.publishedDate || "",
                     pageCount: book.pageCount || 0,
                     categories: book.categories || []
                 };
             }
         } catch (googleError) {
-            console.warn('Google Books API 搜尋失敗:', googleError);
+            console.warn("Google Books API 搜尋失敗:", googleError);
         }
         
         // 如果 Google Books 失敗，嘗試 Open Library API
@@ -371,59 +370,61 @@ async function searchBookByISBN(isbn) {
                 const book = data[bookKey];
                 
                 return {
-                    title: book.title || 'Unknown Title',
-                    author: book.authors ? book.authors.map(a => a.name).join(', ') : 'Unknown Author',
+                    title: book.title || "Unknown Title",
+                    author: book.authors ? book.authors.map(a => a.name).join(", ") : "Unknown Author",
                     cover: book.cover ? book.cover.medium || book.cover.large || book.cover.small : null,
                     isbn: cleanISBN,
-                    description: book.description || '',
-                    publishedDate: book.publish_date || '',
+                    description: book.description || "",
+                    publishedDate: book.publish_date || "",
                     pageCount: book.number_of_pages || 0
                 };
             }
         } catch (openLibError) {
-            console.warn('Open Library API 搜尋失敗:', openLibError);
+            console.warn("Open Library API 搜尋失敗:", openLibError);
         }
         
-        throw new Error('找不到該 ISBN 對應的書籍');
+        throw new Error("找不到該 ISBN 對應的書籍");
         
     } catch (error) {
-        console.error('ISBN 搜尋失敗:', error);
+        console.error("ISBN 搜尋失敗:", error);
         throw error;
+    } finally {
+        hideLoadingIndicator();
     }
 }
 
 // ==================== UI 輔助函式 ====================
 
 // 顯示載入指示器
-function showLoadingIndicator(message = '載入中...') {
-    const loadingIndicator = document.getElementById('loadingIndicator');
+function showLoadingIndicator(message = "載入中...") {
+    const loadingIndicator = document.getElementById("loadingIndicator");
     if (loadingIndicator) {
-        const loadingText = loadingIndicator.querySelector('span');
+        const loadingText = loadingIndicator.querySelector("span");
         if (loadingText) {
             loadingText.textContent = message;
         }
-        loadingIndicator.classList.remove('hidden');
+        loadingIndicator.classList.remove("hidden");
     }
 }
 
 // 隱藏載入指示器
 function hideLoadingIndicator() {
-    const loadingIndicator = document.getElementById('loadingIndicator');
+    const loadingIndicator = document.getElementById("loadingIndicator");
     if (loadingIndicator) {
-        loadingIndicator.classList.add('hidden');
+        loadingIndicator.classList.add("hidden");
     }
 }
 
 // 顯示 Toast 通知
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
+function showToast(message, type = "success") {
+    const toast = document.createElement("div");
     toast.className = `toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
     
-    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => toast.classList.add("show"), 100);
     setTimeout(() => {
-        toast.classList.remove('show');
+        toast.classList.remove("show");
         setTimeout(() => {
             if (document.body.contains(toast)) {
                 document.body.removeChild(toast);
@@ -459,7 +460,7 @@ function cleanup() {
 }
 
 // 頁面卸載時清理資源
-window.addEventListener('beforeunload', cleanup);
+window.addEventListener("beforeunload", cleanup);
 
 // ==================== 導出函式 ====================
 
@@ -469,9 +470,15 @@ window.firebaseBookOperations = {
     initializeBooksData,
     
     // CRUD 操作
-    addBookToFirestore,
-    updateBookInFirestore,
-    deleteBookFromFirestore,
+    addBookToFirestore: async (bookData) => {
+        return await window.firebaseIntegration.addDocToCollection("books", bookData);
+    },
+    updateBookInFirestore: async (bookId, updateData) => {
+        return await window.firebaseIntegration.updateDocInCollection("books", bookId, updateData);
+    },
+    deleteBookFromFirestore: async (bookId) => {
+        return await window.firebaseIntegration.deleteDocFromCollection("books", bookId);
+    },
     
     // ISBN 搜尋
     searchBookByISBN,
@@ -496,17 +503,18 @@ window.deleteBookFromFirestore = deleteBookFromFirestore;
 window.searchBookByISBN = searchBookByISBN;
 
 // 自動初始化
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener("DOMContentLoaded", async () => {
     // 等待 Firebase 初始化完成
     if (window.firebaseIntegration) {
         try {
             await initializeBooksData();
         } catch (error) {
-            console.error('書籍資料初始化失敗:', error);
+            console.error("書籍資料初始化失敗:", error);
         }
     } else {
-        console.warn('Firebase 整合模組未載入，使用本地儲存');
+        console.warn("Firebase 整合模組未載入，使用本地儲存");
         loadBooksFromLocalStorage();
     }
 });
+
 
