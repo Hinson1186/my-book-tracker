@@ -1,4 +1,4 @@
-const GOOGLE_BOOKS_API_KEY = 
+const GOOGLE_BOOKS_API_KEY = AIzaSyBNiBa24j2t4WmwU4WgNujGCAPiX6VRN_4
 // Firebase 書籍操作模組
 // 此文件包含所有與書籍相關的 Firebase 操作，替換原有的本地儲存邏輯
 
