@@ -433,7 +433,14 @@
             toastElement.className = `toast show ${type}`;
             setTimeout(() => {
                 toastElement.classList.remove("show");
-            }, 3000);
+                // 完全隱藏通知，確保不會留在頁面上
+                setTimeout(() => {
+                    toastElement.style.display = 'none';
+                }, 300); // 等待動畫完成後隱藏
+            }, 2000); // 縮短顯示時間到 2 秒
+            
+            // 顯示時確保元素可見
+            toastElement.style.display = 'block';
         }
 
         function updateOfflineOperationsCount(count) {
@@ -780,25 +787,29 @@
             const hasChildren = allCategories.some(cat => cat.parentId === category.id);
 
             li.innerHTML = `
-                <div class="flex items-center group cursor-pointer hover:bg-gray-100 p-2 rounded-md">
+                <div class="flex items-center group cursor-pointer hover:bg-gray-100 p-2 rounded-md category-item" data-id="${category.id}">
                     ${hasChildren ? `<i class="fas fa-chevron-right text-gray-400 mr-2 category-toggle" data-id="${category.id}"></i>` : `<i class="fas fa-circle text-gray-400 text-xs mr-3"></i>`}
                     <span class="flex-grow category-filter" data-id="${category.id}">${category.name}</span>
                 </div>
                 <ul class="category-children hidden" data-parent-id="${category.id}"></ul>
             `;
 
+            const categoryItem = li.querySelector(".category-item");
             const toggleIcon = li.querySelector(".category-toggle");
-            if (toggleIcon) {
-                toggleIcon.addEventListener("click", (e) => {
-                    e.stopPropagation();
+            
+            // 為整個分類項目添加點擊事件
+            categoryItem.addEventListener("click", (e) => {
+                e.stopPropagation();
+                
+                // 如果有子分類，則展開/收縮
+                if (hasChildren) {
                     const childrenList = li.querySelector(".category-children");
                     childrenList.classList.toggle("hidden");
-                    e.target.classList.toggle("fa-chevron-right");
-                    e.target.classList.toggle("fa-chevron-down");
-                });
-            }
-
-            li.querySelector(".category-filter").addEventListener("click", () => {
+                    toggleIcon.classList.toggle("fa-chevron-right");
+                    toggleIcon.classList.toggle("fa-chevron-down");
+                }
+                
+                // 設置當前篩選分類
                 currentFilterCategory = category.id;
                 renderBooks();
             });
