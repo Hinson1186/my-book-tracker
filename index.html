@@ -1116,6 +1116,28 @@
 
         // ==================== 工具函數 ====================
 
+        function populateCategorySelect(selectElement = null) {
+            // 如果沒有指定元素，則更新所有分類選擇器
+            const selectors = selectElement ? [selectElement] : [
+                document.getElementById('bookCategorySelect'),
+                document.getElementById('isbnBookCategorySelect')
+            ].filter(el => el); // 過濾掉不存在的元素
+
+            selectors.forEach(selector => {
+                if (selector) {
+                    selector.innerHTML = '<option value="uncategorized">未分類</option>';
+                    
+                    // 添加所有分類選項
+                    allCategories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = getCategoryPath(category.id);
+                        selector.appendChild(option);
+                    });
+                }
+            });
+        }
+
         function getCategoryPath(categoryId) {
             if (categoryId === "uncategorized") return "未分類";
             const category = allCategories.find(cat => cat.id === categoryId);
@@ -1156,48 +1178,91 @@
         }
 
         async function searchBookByIsbn(isbn) {
-            // 優先使用 Google Books API
-            if (GOOGLE_BOOKS_API_KEY) {
-                try {
-                    const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&key=${GOOGLE_BOOKS_API_KEY}`);
+            // 清理 ISBN 格式
+            const cleanIsbn = isbn.replace(/[-\s]/g, '');
+            
+            // 1. 優先使用 Open Library API (免費且穩定)
+            try {
+                const response = await fetch(`https://openlibrary.org/isbn/${cleanIsbn}.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.title) {
+                        const title = data.title || "";
+                        let authors = [];
+                        
+                        // 獲取作者資訊
+                        if (data.authors && data.authors.length > 0) {
+                            try {
+                                authors = await Promise.all(data.authors.map(async (author) => {
+                                    try {
+                                        const authorRes = await fetch(`https://openlibrary.org${author.key}.json`);
+                                        if (authorRes.ok) {
+                                            const authorData = await authorRes.json();
+                                            return authorData.name || "未知作者";
+                                        }
+                                    } catch (e) {
+                                        return "未知作者";
+                                    }
+                                    return "未知作者";
+                                }));
+                            } catch (e) {
+                                authors = ["未知作者"];
+                            }
+                        } else {
+                            authors = ["未知作者"];
+                        }
+                        
+                        const cover = data.covers && data.covers.length > 0 ? 
+                            `https://covers.openlibrary.org/b/id/${data.covers[0]}-L.jpg` : "";
+                        const description = typeof data.description === "string" ? 
+                            data.description : (data.description?.value || "");
+
+                        return {
+                            title: title,
+                            author: authors.join(", "),
+                            cover: cover,
+                            description: description,
+                            source: "Open Library"
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error("Open Library API 搜尋失敗:", error);
+            }
+
+            // 2. 備用 Google Books API
+            try {
+                const googleUrl = GOOGLE_BOOKS_API_KEY ? 
+                    `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}&key=${GOOGLE_BOOKS_API_KEY}` :
+                    `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`;
+                    
+                const response = await fetch(googleUrl);
+                if (response.ok) {
                     const data = await response.json();
                     if (data.items && data.items.length > 0) {
                         const item = data.items[0].volumeInfo;
                         return {
-                            title: item.title,
+                            title: item.title || "未知書名",
                             author: item.authors ? item.authors.join(", ") : "未知作者",
-                            cover: item.imageLinks ? item.imageLinks.thumbnail : "",
-                            description: item.description || ""
+                            cover: item.imageLinks ? (item.imageLinks.thumbnail || item.imageLinks.smallThumbnail || "") : "",
+                            description: item.description || "",
+                            source: "Google Books"
                         };
                     }
-                } catch (error) {
-                    console.error("Google Books API 搜尋失敗:", error);
-                }
-            }
-
-            // 備用 Open Library API
-            try {
-                const response = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
-                const data = await response.json();
-                if (data) {
-                    const title = data.title || "";
-                    const authors = data.authors ? await Promise.all(data.authors.map(async (author) => {
-                        const authorRes = await fetch(`https://openlibrary.org${author.key}.json`);
-                        const authorData = await authorRes.json();
-                        return authorData.name;
-                    })) : [];
-                    const cover = data.covers ? `https://covers.openlibrary.org/b/id/${data.covers[0]}-L.jpg` : "";
-                    const description = typeof data.description === "string" ? data.description : data.description?.value || "";
-
-                    return {
-                        title: title,
-                        author: authors.join(", "),
-                        cover: cover,
-                        description: description
-                    };
                 }
             } catch (error) {
-                console.error("Open Library API 搜尋失敗:", error);
+                console.error("Google Books API 搜尋失敗:", error);
+            }
+
+            // 3. 嘗試 WorldCat API (免費)
+            try {
+                const response = await fetch(`https://www.worldcat.org/isbn/${cleanIsbn}`);
+                if (response.ok) {
+                    // WorldCat 通常會重定向到書籍頁面，我們可以嘗試解析
+                    console.log("WorldCat 查詢成功，但需要進一步解析");
+                }
+            } catch (error) {
+                console.error("WorldCat API 搜尋失敗:", error);
             }
 
             return null;
@@ -1290,25 +1355,57 @@
                 isbnSearchResults.classList.add("hidden");
                 addFoundBookBtn.classList.add("hidden");
 
-                const book = await searchBookByIsbn(isbn);
+                try {
+                    const book = await searchBookByIsbn(isbn);
 
-                searchIsbnSpinner.classList.add("hidden");
-                searchIsbnText.textContent = "搜尋";
-
-                if (book) {
-                    isbnBookCover.src = book.cover || "https://via.placeholder.com/128x192?text=No+Cover";
-                    isbnBookTitle.textContent = book.title;
-                    isbnBookAuthor.textContent = book.author;
-                    isbnBookCategory.textContent = ""; // 分類在新增時選擇
-                    
-                    // 更新分類選擇器
-                    updateCategorySelector(isbnBookCategorySelect);
-                    
-                    isbnSearchResults.classList.remove("hidden");
-                    addFoundBookBtn.classList.remove("hidden");
-                    addFoundBookBtn.dataset.book = JSON.stringify(book);
-                } else {
-                    showToast("未找到該 ISBN 的書籍資訊。", "error");
+                    if (book) {
+                        isbnBookCover.src = book.cover || "https://via.placeholder.com/128x192?text=No+Cover";
+                        isbnBookTitle.textContent = book.title;
+                        isbnBookAuthor.textContent = book.author;
+                        
+                        // 顯示資料來源
+                        const sourceElement = document.getElementById('isbnBookSource');
+                        if (sourceElement) {
+                            sourceElement.textContent = `資料來源：${book.source}`;
+                        } else {
+                            // 如果沒有來源顯示元素，創建一個
+                            const sourceDiv = document.createElement('div');
+                            sourceDiv.id = 'isbnBookSource';
+                            sourceDiv.className = 'text-xs text-gray-500 mt-1';
+                            sourceDiv.textContent = `資料來源：${book.source}`;
+                            isbnBookAuthor.parentNode.appendChild(sourceDiv);
+                        }
+                        
+                        // 更新分類選擇器
+                        populateCategorySelect(isbnBookCategorySelect);
+                        
+                        isbnSearchResults.classList.remove("hidden");
+                        addFoundBookBtn.classList.remove("hidden");
+                        addFoundBookBtn.dataset.book = JSON.stringify(book);
+                        
+                        showToast(`成功從 ${book.source} 找到書籍資訊！`, "success");
+                    } else {
+                        // 搜尋失敗，提供手動輸入選項
+                        showToast(`ISBN ${isbn} 在資料庫中找不到，可能是台灣本地出版品。`, "warning");
+                        
+                        // 詢問用戶是否要手動新增
+                        if (confirm(`找不到 ISBN ${isbn} 的書籍資訊。\n\n這可能是台灣本地出版的書籍，是否要手動新增書籍資訊？`)) {
+                            // 關閉 ISBN 搜尋模態框
+                            closeAddByIsbnModal();
+                            
+                            // 開啟新增書籍模態框
+                            openAddBookModal();
+                            
+                            // 提示用戶輸入資訊
+                            showToast(`請手動輸入 ISBN ${isbn} 對應的書籍資訊`, "info");
+                        }
+                    }
+                } catch (error) {
+                    console.error('ISBN 搜尋錯誤:', error);
+                    showToast("搜尋時發生錯誤，請檢查網路連接或稍後再試", "error");
+                } finally {
+                    searchIsbnSpinner.classList.add("hidden");
+                    searchIsbnText.textContent = "搜尋";
                 }
             });
 
